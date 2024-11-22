@@ -16,10 +16,7 @@ import dill as pickle
 from astropy.time import Time 
 
 import spiceypy as spice
-from mpl_toolkits.mplot3d import Axes3D 
-
-
-from tslearn.piecewise import PiecewiseAggregateApproximation
+from mpl_toolkits.mplot3d import Axes3D
 
 from astropy.time import Time 
 
@@ -27,7 +24,6 @@ import spiceypy as spice
 from mpl_toolkits.mplot3d import Axes3D 
 
 
-from pyfilterbank import melbank
 from scipy import fft
 
 import datetime as dt

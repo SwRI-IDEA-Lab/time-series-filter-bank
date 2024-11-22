@@ -29,20 +29,15 @@ dependencies:
 - conda-forge::nodejs            # for extensions in jupyterlab
 - conda-forge::tqdm              # 
 - nb_conda_kernels
-# iSAX
-- tslearn
-- hdbscan
-- pytorch
 - pip
 - pip:
   - wandb
+  - dill
   # Jupyter
   - ipykernel
   - ipywidgets
   # isax
   - anytree
   - pyyaml
-  - dill
-  - git+https://github.com/SiggiGue/pyfilterbank.git
   - graphviz
   - cdflib
