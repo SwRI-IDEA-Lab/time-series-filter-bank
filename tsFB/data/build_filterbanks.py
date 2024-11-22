@@ -184,8 +184,7 @@ def visualize_filterbank_application(data_df,
                                      show_plot=True,
                                      save_results=False):
     """Plot comprehensive visualization of filterbank and its application to a set of test data.
-    Plot includes the filterbank, raw test data, decomposition of filterbank preprocessed data and PAA, 
-    and series recovered from summing up each filterbank PAA application.
+    Plot includes the filterbank, raw test data, decomposition of filterbank preprocessed data.
     
     Parameters
     ----------
@@ -201,8 +200,6 @@ def visualize_filterbank_application(data_df,
     x = data_df.index
     y = data_df[data_col]
     all_filtered = np.zeros((fb_matrix.shape[0],data_df.shape[0]))
-    all_paa = np.zeros((fb_matrix.shape[0],data_df.shape[0]))
-    total_paa = np.zeros(data_df[data_col].shape)
 
     data_span = x[-1]-x[0]
 
@@ -232,19 +229,9 @@ def visualize_filterbank_application(data_df,
             if word_size > len(x):
                 word_size = len(x)
         
-        # PAA application
-        paa = PiecewiseAggregateApproximation(word_size)
-        paa_sequence = paa.fit_transform(filtered_sig.reshape(1,-1))
-
-        paa_sfull = paa.inverse_transform(paa_sequence)
-        paa_sfull = paa_sfull.reshape(-1)
-
-        all_paa[i] = paa_sfull
-        total_paa = total_paa + paa_sfull 
 
         ax0 = fig.add_subplot(gs[2*i:2*i+2,1])    
         ax0.plot(x, filtered_sig,label=f'center_freq = {center_freq[i]:.2e}')
-        # ax0.plot(x, paa_sfull, c='r',label=f'word_size = {word_size}')
         ax0.set_xticks([])
         ax0.set_yticks([])
         ax0.legend(loc='upper right',bbox_to_anchor=(1.4, 1))
@@ -254,21 +241,13 @@ def visualize_filterbank_application(data_df,
         
     if fb_matrix.shape[0]<5:
         os_gs = gs[3:4,0]
-        pr_gs = gs[5:6,0]
     else:
         os_gs = gs[4:6,0]
-        pr_gs = gs[7:9,0]
-    # ax0 = fig.add_subplot(pr_gs)   
-    # ax0.plot(x, total_paa, c='r')
-    # ax0.set_title('Series recovered from filter bank PAA')
-    # ax0.set_xticks([])
-    # ax0.set_yticks([])
 
 
     ax0 = fig.add_subplot(os_gs)   
     ax0.plot(x, y)
     ax0.set_title('Original series')
-    # ax0.plot(x[0:-1:20], total_paa[0:-1:20], c='r')
     ax0.set_xticks([])
     ax0.set_yticks([])
 
@@ -289,7 +268,7 @@ def visualize_filterbank_application(data_df,
         plt.close()
 
     if save_results:
-        return all_filtered,all_paa
+        return all_filtered
 
 class filterbank:
     def __init__(self,
