@@ -148,10 +148,10 @@ class filterbank:
         center_freq = []
         windows.sort(reverse=True)
         for i,w in enumerate(windows[:-1]):
-            DT = 1 - moving_avg_freq_response(f=self.freq_smprt,
+            DT = 1 - moving_avg_freq_response(f=self.freq_spectrum['sample_rate_frac'],
                                               window=dt.timedelta(seconds=w),
                                               cadence=self.cadence)
-            SM = moving_avg_freq_response(f=self.freq_smprt,
+            SM = moving_avg_freq_response(f=self.freq_spectrum['sample_rate_frac'],
                                           window=dt.timedelta(seconds=windows[i+1]),
                                           cadence=self.cadence)
             FR = SM*DT
