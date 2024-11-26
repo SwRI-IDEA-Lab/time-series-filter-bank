@@ -16,10 +16,17 @@ sys.path.append(_SRC_DIR)
 _SRC_DATA_DIR = os.path.join(_SRC_DIR,'data',)
 
 
-def moving_avg_freq_response(f,window=dt.timedelta(minutes=3000),cadence=dt.timedelta(minutes=1)):
+def moving_avg_freq_response(f,
+                             window=dt.timedelta(minutes=3000),
+                             cadence=dt.timedelta(minutes=1)):
     n = int(window.total_seconds()/cadence.total_seconds())
     numerator = np.sin(np.pi*f*n)
     denominator = n*np.sin(np.pi*f)
+
+    # deal with zero/zero
+    zidx = np.where(denominator==0.0)[0]
+    denominator[zidx] = numerator[zidx]= 1
+    
     return abs(numerator/denominator)
 
 def visualize_filterbank(fb_matrix,
@@ -46,8 +53,9 @@ class filterbank:
                  restore_from_file:str = None):
         self.data_len = data_len
         self.cadence = cadence
-        self.freq_spectrum = np.linspace(0.0001,data_len/2,(data_len//2)+1)
-        self.freq_smprt = np.linspace(0.0001,0.5,(data_len//2)+1)
+        
+        self.freq_spectrum = np.linspace(0.0,data_len/2,(data_len//2)+1)
+        self.freq_smprt = np.linspace(0.0,0.5,(data_len//2)+1)
         self.freq_hz_spec = self.freq_spectrum/(data_len*cadence.total_seconds())
         
         # placeholders
@@ -88,7 +96,7 @@ class filterbank:
         """
         freq_min, freq_max = filter_freq_range
 
-        # if center frequencies not specified, centers are evenly spaced out given the 
+        # if center frequencies not specified, centers are evenly spaced out given the freq range
         if center_freq is None or len(center_freq) == 0:
             delta_freq = abs(freq_max - freq_min) / (num_bands + 1.0)
             edge_freq = freq_min + delta_freq*arange(0, num_bands+2)
