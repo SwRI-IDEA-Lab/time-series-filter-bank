@@ -1,5 +1,6 @@
 import cdflib
 
+import argparse
 from tqdm import tqdm
 from pathlib import Path
 import pandas as pd
@@ -7,22 +8,10 @@ from numpy import abs, append, arange, insert, linspace, log10, round, zeros
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.gridspec as gridspec
-import matplotlib.lines as mlines
-from multiprocessing import Pool
-from scipy.stats import norm
 
 import dill as pickle
 
-from astropy.time import Time 
-
-import spiceypy as spice
-from mpl_toolkits.mplot3d import Axes3D
-
-from astropy.time import Time 
-
-import spiceypy as spice
 from mpl_toolkits.mplot3d import Axes3D 
-
 
 from scipy import fft
 
@@ -38,12 +27,22 @@ sys.path.append(_SRC_DIR)
 import tsFB.data.prototyping_metrics as pm
 import tsFB.utils.time_chunking as tc
 
+# Data paths
 _PSP_MAG_DATA_DIR = '/sw-data/psp/mag_rtn/'
 _WIND_MAG_DATA_DIR = '/sw-data/wind/mfi_h2/'
 _OMNI_MAG_DATA_DIR = '/sw-data/nasaomnireader/'
 _SRC_DATA_DIR = os.path.join(_SRC_DIR,'data',)
 
 _EXPONENTS_LIST = [2.15, 1.05, 1.05]
+
+# Debugger arguments
+parser = argparse.ArgumentParser()
+parser.add_argument(
+    '-start_year',
+    help='Starting year for catalog generation.',
+    type=int,
+    default=2007
+)
 
 def get_test_data(fname_full_path=None,
                   fname = None,

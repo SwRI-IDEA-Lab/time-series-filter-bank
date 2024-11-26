@@ -20,7 +20,7 @@ sys.path.append(_SRC_DIR)
 # local imports
 import tsFB.data.prototyping_metrics as pm
 import tsFB.utils.time_chunking as tc
-import tsFB.data.build_filterbanks as fb
+import tsFB.build_filterbanks as fb
 
 # optional
 import warnings

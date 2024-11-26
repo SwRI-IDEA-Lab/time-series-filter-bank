@@ -9,7 +9,7 @@ from scipy.interpolate import interp1d
 from scipy import fft
 
 import tsFB.data.prototyping_metrics as pm
-import tsFB.data.build_filterbanks as fb
+import tsFB.build_filterbanks as fb
 
 # Initialize Python Logger
 logging.basicConfig(format='%(levelname)-4s '
