@@ -23,20 +23,8 @@ _MODEL_DIR = os.path.dirname(_FILE_DIR)
 _SRC_DIR = os.path.dirname(_MODEL_DIR)
 sys.path.append(_SRC_DIR)
 
-# local imports
-import tsFB.data.prototyping_metrics as pm
-import tsFB.utils.time_chunking as tc
-
 # Data paths
-_PSP_MAG_DATA_DIR = '/sw-data/psp/mag_rtn/'
-_WIND_MAG_DATA_DIR = '/sw-data/wind/mfi_h2/'
-_OMNI_MAG_DATA_DIR = '/sw-data/nasaomnireader/'
 _SRC_DATA_DIR = os.path.join(_SRC_DIR,'data',)
-
-_EXPONENTS_LIST = [2.15, 1.05, 1.05]
-
-# Debugger arguments
-parser = argparse.ArgumentParser()
 
 
 # %% Ch. 15 Formula
