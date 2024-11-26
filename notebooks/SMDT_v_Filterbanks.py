@@ -20,7 +20,8 @@ sys.path.append(_SRC_DIR)
 # local imports
 import tsFB.data.prototyping_metrics as pm
 import tsFB.utils.time_chunking as tc
-import tsFB.build_filterbanks as fb
+import tsFB.build_filterbanks as bfb
+import tsFB.filterbank_analysis as fba
 
 # optional
 import warnings
@@ -34,9 +35,9 @@ warnings.filterwarnings("ignore")
 
 year = '2019'
 month = '05'
-test_cdf_file_path =_MODEL_DIR+fb._OMNI_MAG_DATA_DIR+ year +'/omni_hro_1min_'+ year+month+'01_v01.cdf'
+test_cdf_file_path =_MODEL_DIR+fba._OMNI_MAG_DATA_DIR+ year +'/omni_hro_1min_'+ year+month+'01_v01.cdf'
 
-mag_df = fb.get_test_data(fname_full_path=test_cdf_file_path)
+mag_df = fba.get_test_data(fname_full_path=test_cdf_file_path)
 cols = ['BY_GSE']
 mag_df=mag_df[cols]
 mag_df
@@ -101,22 +102,22 @@ mag_df.interpolate(method='index', kind='linear',limit_direction='both',inplace=
 # # Create Frequency Domain Filterbanks
 
 # %% Moving average filterbanks
-DTSM = fb.filterbank(data_len=len(mag_df),
+DTSM = bfb.filterbank(data_len=len(mag_df),
                     cadence=dt.timedelta(seconds=60))
 DTSM.build_DTSM_fb(windows=[2000,6000,18000,54000])
 
 DTSM.add_mvgavg_DC_HF()
-fb.visualize_filterbank(fb_matrix=DTSM.fb_matrix,
+bfb.visualize_filterbank(fb_matrix=DTSM.fb_matrix,
                         fftfreq=DTSM.freq_hz_spec,
                         xlim=(0,0.002))
 
 # %% triangle filterbanks
-tri = fb.filterbank(data_len=len(mag_df),
+tri = bfb.filterbank(data_len=len(mag_df),
                     cadence=dt.timedelta(seconds=60))
 tri.build_triangle_fb((0.0,np.sort(DTSM.center_freq)[-1]),
                       center_freq=np.sort(DTSM.center_freq[1:-1]))
 tri.add_DC_HF_filters()
-fb.visualize_filterbank(fb_matrix=tri.fb_matrix,
+bfb.visualize_filterbank(fb_matrix=tri.fb_matrix,
                         fftfreq=tri.freq_hz_spec,
                         xlim=(0.0,0.002))
 
@@ -148,7 +149,7 @@ plt.show()
 # %%
 # TODO: Remove PAA application parts for filterbank paper purposes
 # %%
-DTSM_filtered, DTSM_paa = fb.visualize_filterbank_application(data_df=mag_df,
+DTSM_filtered = fba.visualize_filterbank_application(data_df=mag_df,
                                                             fb_matrix=DTSM.fb_matrix,
                                                             fftfreq=DTSM.freq_hz_spec,
                                                             data_col='BY_GSE',
@@ -161,7 +162,7 @@ DTSM_filtered, DTSM_paa = fb.visualize_filterbank_application(data_df=mag_df,
                                                             save_results=True)
 
 # %%
-tri_filtered, tri_paa = fb.visualize_filterbank_application(data_df=mag_df,
+tri_filtered = fba.visualize_filterbank_application(data_df=mag_df,
                                                             fb_matrix=tri.fb_matrix,
                                                             fftfreq=tri.freq_hz_spec,
                                                             data_col='BY_GSE',
@@ -268,26 +269,9 @@ plt.ylabel('Residual (nT)')
 plt.title('Direct residual of reconstructed signals compared with original data signal')
 plt.grid()
 plt.show()
-# %% Plot residuals: individually
-# for i,selection in enumerate(['DTSM','Convolution','Triangles']):
-#     plt.figure(figsize=(10,5))
-#     plt.plot(mag_df.index,residuals[selection],
-#              label=f'{selection}')
-#     plt.hlines(0.0,min(mag_df.index),max(mag_df.index),
-#                colors='black',linewidth=3)
-#     plt.legend()
-#     plt.xlabel('Index')
-#     plt.ylabel('Residual (nT)')
-#     plt.title('Absolute Residual of reconstructed signal compared with original data signal')
-#     plt.grid()
-#     plt.show()
 
 
 # %% relative residuals
-# DTSM_rel_residual = np.abs(DTSM_residual)/np.abs(real)
-# tri_rel_residual = np.abs(tri_residual)/np.abs(real)
-# conv_rel_residual = np.abs(conv_residual)/np.abs(real)
-
 DTSM_rel_residual = DTSM_residual/real
 tri_rel_residual = tri_residual/real
 conv_rel_residual = conv_residual/real
@@ -307,26 +291,14 @@ plt.ylabel('Relative Residual')
 plt.title('Relative Residual of reconstructed signals compared with original data signal')
 plt.grid()
 plt.show()
-# %% Plot relative residuals: individually
-# for i,selection in enumerate(['DTSM','Convolution','Triangles']):
-#     plt.figure(figsize=(10,5))
-#     plt.plot(mag_df.index,rel_residuals[selection],
-#              label=f'{selection}')
-#     plt.hlines(0.0,min(mag_df.index),max(mag_df.index),
-#                colors='black',linewidth=3)
-#     plt.legend()
-#     plt.xlabel('Index')
-#     plt.ylabel('Relative Residual')
-#     plt.title('RELATIVE Residual of reconstructed signal compared with original data signal')
-#     plt.grid()
-#     plt.show()
+
 # %% Excess power in relation to number of filters
 winds = [500,1000,1500,2250]
 lens1 = []
 max_excess1=[]
 for i in range(25):
    
-    DTSM = fb.filterbank(data_len=len(mag_df),
+    DTSM = bfb.filterbank(data_len=len(mag_df),
                         cadence=dt.timedelta(seconds=60))
     # DTSM.build_DTSM_fb(windows=[500,1000,2000,5000,18000,21000,54000])
     DTSM.build_DTSM_fb(windows=winds)
@@ -360,13 +332,13 @@ rel_res = []
 max_abs_rel_res =[]
 for i in range(50):
    
-    DTSM = fb.filterbank(data_len=len(mag_df),
+    DTSM = bfb.filterbank(data_len=len(mag_df),
                         cadence=dt.timedelta(seconds=60))
     # DTSM.build_DTSM_fb(windows=[500,1000,2000,5000,18000,21000,54000])
     DTSM.build_DTSM_fb(windows=winds)
     DTSM.add_mvgavg_DC_HF()
 
-    DTSM_filtered, DTSM_paa = fb.visualize_filterbank_application(data_df=mag_df,
+    DTSM_filtered = fba.visualize_filterbank_application(data_df=mag_df,
                                                             fb_matrix=DTSM.fb_matrix,
                                                             fftfreq=DTSM.freq_hz_spec,
                                                             data_col='BY_GSE',
