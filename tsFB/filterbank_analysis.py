@@ -38,8 +38,30 @@ _EXPONENTS_LIST = [2.15, 1.05, 1.05]
 
 # Debugger arguments
 parser = argparse.ArgumentParser()
-
-
+parser.add_argument(
+    '-input_file',
+    default=None,
+    help='direct path to file to use for test'
+)
+parser.add_argument(
+    '-start_date',
+    default='2018-11-21',
+    help='Start date for interval. Defaults to 2018-11-21.'
+)
+parser.add_argument(
+    '-stop_date',
+    default='2018-12-31',
+    help='Stop date for interval. Defaults to 2018-12-31.'
+)
+parser.add_argument(
+    '-cadence',
+    default=1,
+    help=(
+        'Final cadence of interpolated timeseries in seconds.'
+        'Defaults to 1 second.'
+    ),
+    type=int
+)
 
 def get_test_data(fname_full_path=None,
                   fname = None,
@@ -222,23 +244,32 @@ def visualize_filterbank_application(data_df,
 
 
 
-
 if __name__ == '__main__':
-    year = '2019'
-    month = '05'
-    test_cdf_file_path =_SRC_DIR+_OMNI_MAG_DATA_DIR+ year +'/omni_hro_1min_'+ year+month+'01_v01.cdf'
+    # args--------------------------------------------------
+    args = vars(parser.parse_args())
+    args['start_date'] = dt.datetime.strptime(
+        args['start_date'],
+        '%Y-%m-%d'
+    )
+    args['stop_date'] = dt.datetime.strptime(
+        args['stop_date'],
+        '%Y-%m-%d'
+    )
+    args['cadence'] = dt.timedelta(seconds=args['cadence'])
+    # -------------------------------------------------------
 
+    # Test data
+    if args['input_file'] is None:
+        year = '2019'
+        month = '05'
+        test_cdf_file_path =_SRC_DIR+_OMNI_MAG_DATA_DIR+ year +'/omni_hro_1min_'+ year+month+'01_v01.cdf'
+    else:
+        test_cdf_file_path = args['input_file']
+    
     mag_df = get_test_data(fname_full_path=test_cdf_file_path)
     mag_df = mag_df-mag_df.mean()
-    # TODO: Set up json excutable way to test (using args, etc.)
-    #=====================================
-    # fltbnk = filterbank()
-    # fltbnk.build_triangle_fb()
-    # fltbnk.add_DC_HF_filters()
-    # fltbnk.visualize_filterbank()
-    #=====================================
 
-    #=====================================
+    # Build Filterbank
     fltbnk = fb.filterbank(data_len=len(mag_df),
                     cadence=dt.timedelta(seconds=60))
     fltbnk.build_triangle_fb(num_bands=4,
@@ -254,42 +285,8 @@ if __name__ == '__main__':
                          fftfreq=fltbnk.freq_hz_spec,
                          xlim=(fltbnk.edge_freq[0],fltbnk.edge_freq[-1]),
                          ylabel='Amplitude')
-    #=====================================
-
-    #=====================================
-    # fltbnk = filterbank()
-    # fltbnk.build_triangle_fb(num_bands=4,
-    #                     sample_rate=1/60,
-    #                     frequencies=[0.0,0.00025,0.00037,0.00065,0.000828,0.001],
-    #                     num_fft_bands=int(1E6))
-    # # fltbnk.add_DC_HF_filters()
-    # fltbnk.visualize_filterbank()
-    #=====================================
-
-    #=====================================
-    # fltbnk = filterbank(restore_from_file='/home/jkobayashi/gh_repos/idea-lab-sw-isax/data/filterbanks/fb_0.000e+00_1.250e-04_2.500e-04_3.750e-04_5.000e-04_6.250e-04_7.500e-04_8.750e-04_1.000e-03.pkl')
-    # fltbnk.visualize_filterbank()
-    #=====================================
-
-    #=====================================
-    # fltbnk = filterbank(data_len=len(mag_df),
-    #                 cadence=dt.timedelta(seconds=60))
-    # fltbnk.build_DTSM_fb(windows=[1000,3000,18000,108000])
-    # fltbnk.visualize_filterbank()
-    # fltbnk.add_mvgavg_DC_HF()
-    # fltbnk.visualize_filterbank()
-    # visualize_filterbank_application(data_df=mag_df,
-    #                                  fb_matrix=fltbnk.fb_matrix,
-    #                                  fftfreq=fltbnk.freq_hz_spec,
-    #                                  data_col='BY_GSE',
-    #                                  cadence=dt.timedelta(minutes=1),
-    #                                  wordsize_factor = 3,
-    #                                  xlim = (0,0.001),
-    #                                  center_freq = fltbnk.center_freq,
-    #                                  DC=fltbnk.DC,
-    #                                  HF=fltbnk.HF)
-    #=====================================
-
+    
+    # Visualize application
     visualize_filterbank_application(data_df=mag_df,
                                      fb_matrix=fltbnk.fb_matrix,
                                      fftfreq=fltbnk.freq_hz_spec,
