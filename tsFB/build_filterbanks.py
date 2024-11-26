@@ -22,25 +22,6 @@ def moving_avg_freq_response(f,window=dt.timedelta(minutes=3000),cadence=dt.time
     denominator = n*np.sin(np.pi*f)
     return abs(numerator/denominator)
 
-def add_DC_HF_filters(fb_matrix,
-                      DC = True,
-                      HF = True):
-    # DC
-    if DC:
-        DC_filter = 1-fb_matrix[0,:]
-        minin = (DC_filter == np.min(DC_filter)).nonzero()[0][0]
-        DC_filter[minin:] = 0
-        fb_matrix = np.append(DC_filter[None,:], fb_matrix, axis=0)
-
-    # HF
-    if HF:
-        HF_filter = 1-fb_matrix[-1,:]
-        minin = (HF_filter == np.min(HF_filter)).nonzero()[0][0]
-        HF_filter[0:minin] = 0
-        fb_matrix = np.append(fb_matrix, HF_filter[None,:], axis=0)
-
-    return fb_matrix
-
 def visualize_filterbank(fb_matrix,
                          fftfreq,
                          xlim:tuple = None,
@@ -166,19 +147,33 @@ class filterbank:
     def add_DC_HF_filters(self,
                           DC = True,
                           HF = True):
-        self.fb_matrix = add_DC_HF_filters(fb_matrix=self.fb_matrix,
-                                           DC=DC,
-                                           HF=HF)
+        # DC
         if DC:
+            # update fb_matrix
+            DC_filter = 1-self.fb_matrix[0,:]
+            minin = (DC_filter == np.min(DC_filter)).nonzero()[0][0]
+            DC_filter[minin:] = 0
+            self.fb_matrix = np.append(DC_filter[None,:], self.fb_matrix, axis=0)
+
+            # update edge frequency lists
             if self.center_freq[0] != self.edge_freq[0]:
                 self.center_freq = np.insert(self.center_freq,0,self.edge_freq[0])
             if self.upper_edges[0] != self.edge_freq[1]:
                 self.upper_edges = np.insert(self.upper_edges,0,self.edge_freq[1])
+        # HF
         if HF:
+            # update fb_matrix
+            HF_filter = 1-self.fb_matrix[-1,:]
+            minin = (HF_filter == np.min(HF_filter)).nonzero()[0][0]
+            HF_filter[0:minin] = 0
+            self.fb_matrix = np.append(self.fb_matrix, HF_filter[None,:], axis=0)
+
+            # update edge frequency lists
             if self.center_freq[-1] != self.edge_freq[-1]:
                 self.center_freq = np.append(self.center_freq,self.edge_freq[-1])
             if self.lower_edges[-1] != self.edge_freq[-2]:
                 self.lower_edges = np.append(self.lower_edges,self.edge_freq[-2])
+        
         self.DC = DC
         self.HF = HF
 
