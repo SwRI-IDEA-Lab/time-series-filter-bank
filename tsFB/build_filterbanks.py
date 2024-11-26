@@ -1,19 +1,9 @@
-import cdflib
-
-import argparse
-from tqdm import tqdm
-from pathlib import Path
-import pandas as pd
 from numpy import abs, append, arange, insert, linspace, log10, round, zeros
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.gridspec as gridspec
 
 import dill as pickle
-
-from mpl_toolkits.mplot3d import Axes3D 
-
-from scipy import fft
 
 import datetime as dt
 import os,sys
@@ -27,7 +17,6 @@ sys.path.append(_SRC_DIR)
 _SRC_DATA_DIR = os.path.join(_SRC_DIR,'data',)
 
 
-# %% Ch. 15 Formula
 def moving_avg_freq_response(f,window=dt.timedelta(minutes=3000),cadence=dt.timedelta(minutes=1)):
     n = int(window.total_seconds()/cadence.total_seconds())
     numerator = np.sin(np.pi*f*n)
