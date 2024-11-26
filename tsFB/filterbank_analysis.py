@@ -242,8 +242,6 @@ def visualize_filterbank_application(data_df,
         return all_filtered
     
 
-
-
 if __name__ == '__main__':
     # args--------------------------------------------------
     args = vars(parser.parse_args())
@@ -276,20 +274,20 @@ if __name__ == '__main__':
                         filter_freq_range=(0.0,0.001),
                         )
     fb.visualize_filterbank(fb_matrix=fltbnk.fb_matrix,
-                         fftfreq=fltbnk.freq_hz_spec,
+                         fftfreq=fltbnk.freq_spectrum['hertz'],
                          xlim=(fltbnk.edge_freq[0],fltbnk.edge_freq[-1]),
                          ylabel='Amplitude')
     fltbnk.add_DC_HF_filters()
     # fltbnk.visualize_filterbank()
     fb.visualize_filterbank(fb_matrix=fltbnk.fb_matrix,
-                         fftfreq=fltbnk.freq_hz_spec,
+                         fftfreq=fltbnk.freq_spectrum['hertz'],
                          xlim=(fltbnk.edge_freq[0],fltbnk.edge_freq[-1]),
                          ylabel='Amplitude')
     
     # Visualize application
     visualize_filterbank_application(data_df=mag_df,
                                      fb_matrix=fltbnk.fb_matrix,
-                                     fftfreq=fltbnk.freq_hz_spec,
+                                     fftfreq=fltbnk.freq_spectrum['hertz'],
                                      data_col='BY_GSE',
                                      cadence=dt.timedelta(minutes=1),
                                      wordsize_factor = 3,

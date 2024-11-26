@@ -53,10 +53,20 @@ class filterbank:
                  restore_from_file:str = None):
         self.data_len = data_len
         self.cadence = cadence
-        
-        self.freq_spectrum = np.linspace(0.0,data_len/2,(data_len//2)+1)
-        self.freq_smprt = np.linspace(0.0,0.5,(data_len//2)+1)
-        self.freq_hz_spec = self.freq_spectrum/(data_len*cadence.total_seconds())
+        # frequency spectrum (based on data length)
+        freq_sample_num = np.linspace(0.0,data_len/2,(data_len//2)+1)
+        freq_sample_rate = freq_sample_num/data_len
+        freq_natural = freq_sample_rate*2*np.pi
+        if cadence is not None:
+            freq_hz = freq_sample_num/(data_len*cadence.total_seconds())
+        else:
+            freq_hz = None
+
+        self.freq_spectrum = {'sample_number':freq_sample_num,
+                              'sample_rate_frac':freq_sample_rate,
+                              'natural_frequency':freq_natural,
+                              'hertz':freq_hz
+                              }
         
         # placeholders
         self.fb_matrix = None
@@ -111,7 +121,7 @@ class filterbank:
         upper_edges = edge_freq[2:]
         
 
-        freqs = self.freq_hz_spec
+        freqs = self.freq_spectrum['hertz']
         melmat = zeros((num_bands, len(freqs)))
 
         for iband, (center, lower, upper) in enumerate(zip(
@@ -134,7 +144,7 @@ class filterbank:
 
     def build_DTSM_fb(self,
                       windows = []):
-        fb_matrix = zeros((len(windows)-1,len(self.freq_spectrum)))
+        fb_matrix = zeros((len(windows)-1,self.data_len//2+1))
         center_freq = []
         windows.sort(reverse=True)
         for i,w in enumerate(windows[:-1]):
@@ -146,7 +156,7 @@ class filterbank:
                                           cadence=self.cadence)
             FR = SM*DT
             fb_matrix[i] = FR
-            center_freq.append(self.freq_hz_spec[np.argmax(FR)])
+            center_freq.append(self.freq_spectrum['hertz'][np.argmax(FR)])
         self.fb_matrix = fb_matrix
         self.center_freq = center_freq
         self.windows = windows
@@ -189,19 +199,19 @@ class filterbank:
                          DC = True,
                          HF = True):
         if DC:
-            SM = moving_avg_freq_response(f=self.freq_spectrum,
+            SM = moving_avg_freq_response(f=self.freq_spectrum['sample_rate_frac'],
                                             window=dt.timedelta(seconds=max(self.windows)),
                                             cadence=self.cadence)
             self.fb_matrix = np.append(SM[None,:],self.fb_matrix,axis=0)
             self.DC = True
-            cnt_fq = self.freq_hz_spec[np.argmax(SM)]
+            cnt_fq = self.freq_spectrum['hertz'][np.argmax(SM)]
             if self.center_freq[0] != cnt_fq:
                 self.center_freq = np.insert(self.center_freq,0,cnt_fq)
             # if self.center_freq[-1] != cnt_fq:
             #     self.center_freq = np.append(self.center_freq,cnt_fq)
 
         if HF:
-            FR = moving_avg_freq_response(f=self.freq_spectrum,
+            FR = moving_avg_freq_response(f=self.freq_spectrum['sample_rate_frac'],
                                             window=dt.timedelta(seconds=min(self.windows)),
                                             cadence=self.cadence)
             DT = 1 - FR
@@ -211,7 +221,7 @@ class filterbank:
                 if f - FR[i+1] <0:
                     cnt_fr_idx = i
                     break
-            cnt_fq = self.freq_hz_spec[cnt_fr_idx]
+            cnt_fq = self.freq_spectrum['hertz'][cnt_fr_idx]
             if self.center_freq[-1] != cnt_fq:
                 self.center_freq = np.append(self.center_freq,cnt_fq)
             # if self.center_freq[0] != cnt_fq:
@@ -221,7 +231,7 @@ class filterbank:
     def visualize_filterbank(self):
         """Show a plot of the built filterbank."""
         visualize_filterbank(fb_matrix=self.fb_matrix,
-                             fftfreq=self.freq_hz_spec,)
+                             fftfreq=self.freq_spectrum['hertz'],)
                             #  xlim=(self.edge_freq[0],self.edge_freq[-1]))
 
     # TODO: Update and fix filterbank saving with new updates (changed attributes, moving average FB, etc.)
