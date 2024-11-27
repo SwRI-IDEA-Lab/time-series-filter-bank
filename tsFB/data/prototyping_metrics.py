@@ -448,16 +448,8 @@ def read_OMNI_dataset(fname):
     mag_data = {}
 
     mag_data['B_mag'] = cdf_file['F']   # Mag. Avg. B-vector
-    # for i in ['X','Y','Z']:
-    #     mag_data[f'B{i}_GSE'] = cdf_file[f'B{i}_GSE']
-    # ==============================================================================
-    # Quick solution to analyze other parameters (remove portion between lines, 
-    # and uncomment above two lines to return to IMF analysis only)
-    # TODO: Implement more long term solution to analyze other SW parameters
-    mag_data['BX_GSE'] = cdf_file['F']
-    mag_data['BY_GSE'] = cdf_file['flow_speed']
-    mag_data['BZ_GSE'] = cdf_file['proton_density']
-    # ==============================================================================
+    for i in ['X','Y','Z']:
+        mag_data[f'B{i}_GSE'] = cdf_file[f'B{i}_GSE']
     # Datetime Index
     dates = convert_OMNI_EPOCH(cdf_file)
     mag_df = pd.DataFrame(mag_data,index=pd.DatetimeIndex(dates)).sort_index()
@@ -471,18 +463,7 @@ def read_OMNI_dataset(fname):
     #------------------------------------------------------------------------------
     mag_df = mag_df.astype('float').round(2)
     # TODO: (JK) Implement long-term solution to repalce fill values with NaNs respective to each parameter
-    # mag_df.replace(to_replace=9999.99,value=np.nan,inplace = True)  # only for IMF data
-
-    # fill values w.r.t each parameter=============================================
-    # TODO: (JK) Allow for more flexibility for replacing fill values other than IMF
-    fill_values = {'B_mag':9999.99,     # 'F'
-                   'BX_GSE':9999.99,    # 'F'
-                   'BY_GSE':99999.9,    # 'flow_speed'
-                   'BZ_GSE':999.99}     # 'proton_density
-    
-    for key,value in fill_values.items():
-        mag_df[[key]] = mag_df[[key]].replace(to_replace=value,value=np.nan)
-    # =============================================================================
+    mag_df.replace(to_replace=9999.99,value=np.nan,inplace = True)  # only for IMF data
 
     return mag_df
 
