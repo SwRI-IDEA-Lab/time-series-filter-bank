@@ -8,7 +8,7 @@ import dill as pickle
 import datetime as dt
 import os,sys
 
-_MODEL_DIR = os.path.dirname( os.path.abspath(__file__))
+_MODEL_DIR = os.path.dirname(os.path.abspath(__file__))
 _SRC_DIR = os.path.dirname(_MODEL_DIR)
 sys.path.append(_SRC_DIR)
 
