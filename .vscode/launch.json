@@ -14,5 +14,20 @@
       "justMyCode": false,
       "interpreterPath":"$/home/jkobayashi/anaconda3/envs/idea-isax-sw/bin/python"
     },
+    {
+      "name": "test analysis",
+      "type": "python",
+      "request": "launch",
+      "console": "integratedTerminal",
+      "module": "${command:extension.commandvariable.file.relativeFileDotsNoExtension}",
+      "cwd": "${workspaceFolder}",
+      "justMyCode": false,
+      "args": [
+        "-start_year", "1999",
+        "-start_month","12",
+        "-start_day","06",
+        "-cadence", "60",
+      ]
+    },
   ]
 }
