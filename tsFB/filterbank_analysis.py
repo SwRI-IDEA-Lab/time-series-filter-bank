@@ -187,20 +187,6 @@ def visualize_filterbank_application(data_df,
         
         all_filtered[i] = filtered_sig
 
-        # wordsize calculation
-        if HF and i == fb_matrix.shape[0]-1:
-            word_size = int(0.9*len(x))
-        else:
-            if DC and i == 0:
-                freq = (center_freq[1]-center_freq[0])/2
-            else:
-                freq = center_freq[i]
-            word_size = int(wordsize_factor*data_span.total_seconds()*freq)
-
-            if word_size > len(x):
-                word_size = len(x)
-        
-
         ax0 = fig.add_subplot(gs[2*i:2*i+2,1])    
         ax0.plot(x, filtered_sig,label=f'center_freq = {center_freq[i]:.2e}')
         ax0.set_xticks([])
@@ -218,7 +204,7 @@ def visualize_filterbank_application(data_df,
 
     ax0 = fig.add_subplot(os_gs)   
     ax0.plot(x, y)
-    ax0.set_title('Original series')
+    ax0.set_title(f'Original series ({data_col})')
     ax0.set_xticks([])
     ax0.set_yticks([])
 
@@ -285,10 +271,11 @@ if __name__ == '__main__':
                          ylabel='Amplitude')
     
     # Visualize application
-    visualize_filterbank_application(data_df=mag_df,
+    for col in mag_df.columns:
+        visualize_filterbank_application(data_df=mag_df,
                                      fb_matrix=fltbnk.fb_matrix,
                                      fftfreq=fltbnk.freq_spectrum['hertz'],
-                                     data_col='BY_GSE',
+                                     data_col=col,
                                      cadence=dt.timedelta(minutes=1),
                                      wordsize_factor = 3,
                                      xlim = (fltbnk.edge_freq[0],fltbnk.edge_freq[-1]),
