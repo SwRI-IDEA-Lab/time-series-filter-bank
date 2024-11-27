@@ -139,21 +139,39 @@ def get_test_data(fname_full_path=None,
 
     return mag_df
 
-def visualize_filterbank_application(data_df,
+def get_filtered_signals(data_df,
+                         fb_matrix,
+                         fftfreq,
+                         data_col,
+                         cadence):
+    if data_col is None:
+        data_col = data_df.columns[-1]
+    filtered_df = np.zeros((fb_matrix.shape[0],data_df.shape[0]))
+    
+    for i in range(fb_matrix.shape[0]):
+        # get filtered signal
+        filtered_sig = tc.preprocess_fft_filter(mag_df=data_df,
+                                                cols=data_df.columns,
+                                                cadence=cadence,
+                                                frequency_weights=fb_matrix[i,:],
+                                                frequency_spectrum=fftfreq)
+        
+        filtered_sig = np.array(filtered_sig[data_col])
+        
+        filtered_df[i] = filtered_sig
+    return filtered_df
+
+def view_filter_decomposition(data_df,
                                      fb_matrix,
                                      fftfreq,
                                      data_col = None,
                                      cadence = dt.timedelta(seconds=300),
                                      figsize=(24,8),
-                                     wordsize_factor=2,
                                      gs_wspace = 0.2,
                                      gs_hspace = 0,
                                      xlim = None,
                                      center_freq = None,
-                                     DC = False,
-                                     HF = False,
-                                     show_plot=True,
-                                     save_results=False):
+                                     show_plot=True):
     """Plot comprehensive visualization of filterbank and its application to a set of test data.
     Plot includes the filterbank, raw test data, decomposition of filterbank preprocessed data.
     
@@ -170,25 +188,17 @@ def visualize_filterbank_application(data_df,
         data_col = data_df.columns[-1]
     x = data_df.index
     y = data_df[data_col]
-    all_filtered = np.zeros((fb_matrix.shape[0],data_df.shape[0]))
 
-    data_span = x[-1]-x[0]
-
+    filtered_df = get_filtered_signals(data_df=data_df,
+                                       fb_matrix=fb_matrix,
+                                       fftfreq=fftfreq,
+                                       data_col=data_col,
+                                       cadence=cadence)
     
     for i in range(fb_matrix.shape[0]):
-        # get filtered signal
-        filtered_sig = tc.preprocess_fft_filter(mag_df=data_df,
-                                                cols=data_df.columns,
-                                                cadence=cadence,
-                                                frequency_weights=fb_matrix[i,:],
-                                                frequency_spectrum=fftfreq)
-        
-        filtered_sig = np.array(filtered_sig[data_col])
-        
-        all_filtered[i] = filtered_sig
 
         ax0 = fig.add_subplot(gs[2*i:2*i+2,1])    
-        ax0.plot(x, filtered_sig,label=f'center_freq = {center_freq[i]:.2e}')
+        ax0.plot(x, filtered_df[i],label=f'center_freq = {center_freq[i]:.2e}')
         ax0.set_xticks([])
         ax0.set_yticks([])
         ax0.legend(loc='upper right',bbox_to_anchor=(1.4, 1))
@@ -223,9 +233,6 @@ def visualize_filterbank_application(data_df,
         plt.show()
     else:
         plt.close()
-
-    if save_results:
-        return all_filtered
     
 
 if __name__ == '__main__':
@@ -272,13 +279,10 @@ if __name__ == '__main__':
     
     # Visualize application
     for col in mag_df.columns:
-        visualize_filterbank_application(data_df=mag_df,
+        view_filter_decomposition(data_df=mag_df,
                                      fb_matrix=fltbnk.fb_matrix,
                                      fftfreq=fltbnk.freq_spectrum['hertz'],
                                      data_col=col,
                                      cadence=dt.timedelta(minutes=1),
-                                     wordsize_factor = 3,
                                      xlim = (fltbnk.edge_freq[0],fltbnk.edge_freq[-1]),
-                                     center_freq = fltbnk.center_freq,
-                                     DC=fltbnk.DC,
-                                     HF=fltbnk.HF)
+                                     center_freq = fltbnk.center_freq)
