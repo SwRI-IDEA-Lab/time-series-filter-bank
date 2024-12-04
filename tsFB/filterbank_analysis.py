@@ -193,6 +193,27 @@ def get_filtered_signals(data_df,
         filtered_df[i] = filtered_sig
     return filtered_df
 
+def get_reconstruction_residuals(filtered_df,
+                                 real_signal,
+                                 relative=True,
+                                 absolute=False,
+                                 percent=False
+                                 ):
+    reconstruction = np.sum(filtered_df,axis=0)
+    residual = real_signal-reconstruction
+
+    if absolute:
+        residual=np.abs(residual)
+
+    if relative:
+        rel_residual = residual/real_signal
+        if percent:
+            return rel_residual*100
+        return rel_residual
+    
+    return residual
+
+
 def view_filter_decomposition(data_df,
                                      fb_matrix,
                                      fftfreq,
@@ -204,7 +225,12 @@ def view_filter_decomposition(data_df,
                                      xlim = None,
                                      center_freq = None,
                                      filterbank_plot_title='Filter bank',
-                                     orig_sig_date=''):
+                                     orig_sig_date='',
+                                     plot_reconstruction=False,
+                                     plot_residual = False,
+                                     relative_residual=True,
+                                     percent_rel_res = True
+                                     ):
     """Plot comprehensive visualization of filterbank and its application to a set of test data.
     Plot includes the filterbank, raw test data, decomposition of filterbank preprocessed data.
     
@@ -240,16 +266,32 @@ def view_filter_decomposition(data_df,
             ax0.set_title('Filter bank decomposition')
         
     if fb_matrix.shape[0]<5:
-        os_gs = gs[3:4,0]
+        os_gs = (3,4)
     else:
-        os_gs = gs[4:6,0]
+        os_gs = (4,6)
 
 
-    ax0 = fig.add_subplot(os_gs)   
+    ax0 = fig.add_subplot(gs[os_gs[0]:os_gs[1],0])   
     ax0.plot(x, y)
-    ax0.set_title(orig_sig_date+f'Original series ({data_col})')
+    ax0.set_title(orig_sig_date+f' Original series ({data_col})')
     # ax0.set_xticks([])
     # ax0.set_yticks([])
+    if plot_reconstruction:
+        ax0.plot(x,np.sum(filtered_df,axis=0),linestyle='dotted')
+    if plot_residual:
+        res = get_reconstruction_residuals(filtered_df=filtered_df,
+                                           real_signal=y,
+                                           relative=relative_residual,
+                                           percent=percent_rel_res)
+        ax1 = fig.add_subplot(gs[os_gs[1]+1:os_gs[1]+2,0])
+        ax1.plot(x,res)
+        rel_title = ''
+        if relative_residual:
+            rel_title = 'Relative '
+        ax1.set_title(rel_title+'Reconstruction Residual')
+        if percent_rel_res:
+            ax1.set_ylabel('%')
+        
 
     if xlim is None:
         xlim = (fftfreq[0],fftfreq[-1])
@@ -309,7 +351,7 @@ if __name__ == '__main__':
     mag_df = get_test_data(fname_full_path=test_cdf_file_path,
                            start_date=args['start_date'],
                            end_date=args['stop_date'])
-    mag_df = mag_df-mag_df.mean()
+    # mag_df = mag_df-mag_df.mean()
 
     # Build Filterbank
     fltbnk = fb.filterbank(data_len=len(mag_df),
@@ -322,7 +364,6 @@ if __name__ == '__main__':
                          xlim=(fltbnk.edge_freq[0],fltbnk.edge_freq[-1]),
                          ylabel='Amplitude')
     fltbnk.add_DC_HF_filters()
-    # fltbnk.visualize_filterbank()
     fb.visualize_filterbank(fb_matrix=fltbnk.fb_matrix,
                          fftfreq=fltbnk.freq_spectrum['hertz'],
                          xlim=(fltbnk.edge_freq[0],fltbnk.edge_freq[-1]),
@@ -337,4 +378,8 @@ if __name__ == '__main__':
                                      cadence=dt.timedelta(minutes=1),
                                      xlim = (fltbnk.edge_freq[0],fltbnk.edge_freq[-1]),
                                      center_freq = fltbnk.center_freq,
-                                     orig_sig_date=f'[{args["start_year"]}-{args['start_month']}-{args['start_day']}] ')
+                                     orig_sig_date=f'[{args["start_year"]}-{args['start_month']}-{args['start_day']}]',
+                                     plot_reconstruction=True,
+                                     plot_residual=True,
+                                     relative_residual=True,
+                                     percent_rel_res=True)
