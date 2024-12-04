@@ -166,7 +166,7 @@ class filterbank:
                           DC = True,
                           HF = True):
         # DC
-        if DC:
+        if DC and not self.DC:
             # update fb_matrix
             DC_filter = 1-self.fb_matrix[0,:]
             minin = (DC_filter == np.min(DC_filter)).nonzero()[0][0]
@@ -179,7 +179,7 @@ class filterbank:
             if self.upper_edges[0] != self.edge_freq[1]:
                 self.upper_edges = np.insert(self.upper_edges,0,self.edge_freq[1])
         # HF
-        if HF:
+        if HF and not self.HF:
             # update fb_matrix
             HF_filter = 1-self.fb_matrix[-1,:]
             minin = (HF_filter == np.min(HF_filter)).nonzero()[0][0]
@@ -198,7 +198,7 @@ class filterbank:
     def add_mvgavg_DC_HF(self,
                          DC = True,
                          HF = True):
-        if DC:
+        if DC and not self.DC:
             SM = moving_avg_freq_response(f=self.freq_spectrum['sample_rate_frac'],
                                             window=dt.timedelta(seconds=max(self.windows)),
                                             cadence=self.cadence)
@@ -210,7 +210,7 @@ class filterbank:
             # if self.center_freq[-1] != cnt_fq:
             #     self.center_freq = np.append(self.center_freq,cnt_fq)
 
-        if HF:
+        if HF and not self.HF:
             FR = moving_avg_freq_response(f=self.freq_spectrum['sample_rate_frac'],
                                             window=dt.timedelta(seconds=min(self.windows)),
                                             cadence=self.cadence)
