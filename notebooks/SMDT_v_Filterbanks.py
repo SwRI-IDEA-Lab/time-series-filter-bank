@@ -109,7 +109,7 @@ DTSM.build_DTSM_fb(windows=[2000,6000,18000,54000])
 DTSM.add_mvgavg_DC_HF()
 bfb.visualize_filterbank(fb_matrix=DTSM.fb_matrix,
                         fftfreq=DTSM.freq_spectrum['hertz'],
-                        xlim=(0,0.002))
+                        xlim=(0,DTSM.center_freq[-1]))
 
 # %% triangle filterbanks
 tri = bfb.filterbank(data_len=len(mag_df),
@@ -119,14 +119,14 @@ tri.build_triangle_fb((0.0,np.sort(DTSM.center_freq)[-1]),
 tri.add_DC_HF_filters()
 bfb.visualize_filterbank(fb_matrix=tri.fb_matrix,
                         fftfreq=tri.freq_spectrum['hertz'],
-                        xlim=(0.0,0.002))
+                        xlim=(0.0,tri.center_freq[-1]))
 
 # %% plot all in single plot
 plt.figure(figsize=(10,5))
 for m_bank in DTSM.fb_matrix:
     plt.plot(DTSM.freq_spectrum['hertz'],m_bank,linewidth=2)
 for t_bank in tri.fb_matrix:
-    plt.plot(tri.freq_spectrum['hertz'],t_bank,linestyle='dashed')
+    plt.plot(tri.freq_spectrum['hertz'],t_bank,linestyle='dashdot')
 
 plt.xlim(0.0,tri.center_freq[-1])
 plt.xlabel('Frequency (Hz)')
@@ -135,7 +135,7 @@ plt.title('Both filterbank types in single plot')
 plt.show()
 
 # %% Sum of filterbank amplitudes
-plt.plot(DTSM.freq_spectrum['hertz'],np.sum(abs(DTSM.fb_matrix),axis=0),label='$\sum$ DTSM filters')
+plt.plot(DTSM.freq_spectrum['hertz'],np.sum(DTSM.fb_matrix,axis=0),label='$\sum$ DTSM filters')
 plt.plot(tri.freq_spectrum['hertz'],np.sum(tri.fb_matrix,axis=0),label='$\sum$ triangles filters')
 plt.xlabel('Frequency (hz)')
 plt.title('Sum of filter amplitudes across all frequencies')
@@ -149,30 +149,32 @@ plt.show()
 # %%
 # TODO: Remove PAA application parts for filterbank paper purposes
 # %%
-DTSM_filtered = fba.visualize_filterbank_application(data_df=mag_df,
-                                                            fb_matrix=DTSM.fb_matrix,
-                                                            fftfreq=DTSM.freq_spectrum['hertz'],
-                                                            data_col='BY_GSE',
-                                                            cadence=dt.timedelta(minutes=1),
-                                                            wordsize_factor = 3,
-                                                            xlim = (0,DTSM.center_freq[-1]),
-                                                            center_freq = DTSM.center_freq,
-                                                            DC=DTSM.DC,
-                                                            HF=DTSM.HF,
-                                                            save_results=True)
+DTSM_filtered = fba.get_filtered_signals(data_df=mag_df,
+                                         fb_matrix=DTSM.fb_matrix,
+                                         fftfreq=DTSM.freq_spectrum['hertz'],
+                                         data_col='BY_GSE',
+                                         cadence=dt.timedelta(minutes=1))
+fba.view_filter_decomposition(data_df=mag_df,
+                            fb_matrix=DTSM.fb_matrix,
+                            fftfreq=DTSM.freq_spectrum['hertz'],
+                            data_col='BY_GSE',
+                            cadence=dt.timedelta(minutes=1),
+                            xlim = (0,DTSM.center_freq[-1]),
+                            center_freq = DTSM.center_freq,)
 
 # %%
-tri_filtered = fba.visualize_filterbank_application(data_df=mag_df,
-                                                            fb_matrix=tri.fb_matrix,
-                                                            fftfreq=tri.freq_spectrum['hertz'],
-                                                            data_col='BY_GSE',
-                                                            cadence=dt.timedelta(minutes=1),
-                                                            wordsize_factor = 3,
-                                                            xlim = (0,tri.center_freq[-1]),
-                                                            center_freq = tri.center_freq,
-                                                            DC=tri.DC,
-                                                            HF=tri.HF,
-                                                            save_results=True)
+tri_filtered = fba.get_filtered_signals(data_df=mag_df,
+                                        fb_matrix=tri.fb_matrix,
+                                        fftfreq=tri.freq_spectrum['hertz'],
+                                        data_col='BY_GSE',
+                                        cadence=dt.timedelta(minutes=1))
+fba.view_filter_decomposition(data_df=mag_df,
+                            fb_matrix=tri.fb_matrix,
+                            fftfreq=tri.freq_spectrum['hertz'],
+                            data_col='BY_GSE',
+                            cadence=dt.timedelta(minutes=1),
+                            xlim = (0,tri.center_freq[-1]),
+                            center_freq = tri.center_freq,)
 
 # %% [markdown]
 # ## "bank" of filtered signals from applying smoothing & detrending in time domain
@@ -338,18 +340,18 @@ for i in range(50):
     DTSM.build_DTSM_fb(windows=winds)
     DTSM.add_mvgavg_DC_HF()
 
-    DTSM_filtered = fba.visualize_filterbank_application(data_df=mag_df,
-                                                            fb_matrix=DTSM.fb_matrix,
-                                                            fftfreq=DTSM.freq_spectrum['hertz'],
-                                                            data_col='BY_GSE',
-                                                            cadence=dt.timedelta(minutes=1),
-                                                            wordsize_factor = 3,
-                                                            xlim = (0,DTSM.center_freq[-1]),
-                                                            center_freq = DTSM.center_freq,
-                                                            DC=DTSM.DC,
-                                                            HF=DTSM.HF,
-                                                            show_plot=False,
-                                                            save_results=True)
+    DTSM_filtered = fba.get_filtered_signals(data_df=mag_df,
+                                             fb_matrix=DTSM.fb_matrix,
+                                             fftfreq=DTSM.freq_spectrum['hertz'],
+                                             data_col='BY_GSE',
+                                             cadence=dt.timedelta(minutes=1))
+    # fba.view_filter_decomposition(data_df=mag_df,
+    #                             fb_matrix=DTSM.fb_matrix,
+    #                             fftfreq=DTSM.freq_spectrum['hertz'],
+    #                             data_col='BY_GSE',
+    #                             cadence=dt.timedelta(minutes=1),
+    #                             xlim = (0,DTSM.center_freq[-1]),
+    #                             center_freq = DTSM.center_freq,)
     sum_DTSM_filtered = np.sum(DTSM_filtered,axis=0)
     res = np.abs((sum_DTSM_filtered-real)/real)
     rel_res.append(res)
