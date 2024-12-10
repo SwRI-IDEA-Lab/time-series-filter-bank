@@ -71,6 +71,7 @@ class filterbank:
         # placeholders
         self.fb_matrix = None
         self.edge_freq = None
+        # TODO: apply better SWE practice of using underscores for encapsulation of attributes
         self.DC = False
         self.HF = False
 
