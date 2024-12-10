@@ -227,8 +227,8 @@ def view_filter_decomposition(data_df,
                                      filterbank_plot_title='Filter bank',
                                      orig_sig_date='',
                                      plot_reconstruction=False,
-                                     plot_residual = False,
-                                     relative_residual=True,
+                                     plot_direct_residual = False,
+                                     plot_rel_residual=False,
                                      percent_rel_res = True
                                      ):
     """Plot comprehensive visualization of filterbank and its application to a set of test data.
@@ -263,34 +263,54 @@ def view_filter_decomposition(data_df,
         ax0.legend(loc='upper right',bbox_to_anchor=(1.4, 1))
 
         if i==0:
-            ax0.set_title('Filter bank decomposition')
+            ax0.set_title('Signal decomposition')
         
-    if fb_matrix.shape[0]<5:
+    if fb_matrix.shape[0]<6:
         os_gs = (3,4)
+        height=1
+        space=1
     else:
         os_gs = (4,6)
+        height=2
+        space=1
+        
 
-
+    
     ax0 = fig.add_subplot(gs[os_gs[0]:os_gs[1],0])   
-    ax0.plot(x, y)
+    ax0.plot(x, y,label='original')
+    ax0.set_ylabel('(nT)')
+    ax0.grid(True)
     ax0.set_title(orig_sig_date+f' Original series ({data_col})')
+    
     # ax0.set_xticks([])
     # ax0.set_yticks([])
+    last_gs = os_gs
     if plot_reconstruction:
-        ax0.plot(x,np.sum(filtered_df,axis=0),linestyle='dotted')
-    if plot_residual:
+        ax0.plot(x,np.sum(filtered_df,axis=0),linestyle='dotted',label='filterbank reconstruction')
+        ax0.legend(loc='upper right',bbox_to_anchor=(1.1, 1.2),fontsize=6)
+    if plot_direct_residual:
         res = get_reconstruction_residuals(filtered_df=filtered_df,
                                            real_signal=y,
-                                           relative=relative_residual,
-                                           percent=percent_rel_res)
-        ax1 = fig.add_subplot(gs[os_gs[1]+1:os_gs[1]+2,0])
+                                           relative=False,
+                                           percent=False)
+        last_gs=(last_gs[1]+space,last_gs[1]+space+height)
+        ax1 = fig.add_subplot(gs[last_gs[0]:last_gs[1],0])
         ax1.plot(x,res)
-        rel_title = ''
-        if relative_residual:
-            rel_title = 'Relative '
-        ax1.set_title(rel_title+'Reconstruction Residual')
+        ax1.set_title('Direct Residual')
+        ax1.set_ylabel('(nT)')
+        ax1.grid(True)
+    if plot_rel_residual:
+        rel_res = get_reconstruction_residuals(filtered_df=filtered_df,
+                                           real_signal=y,
+                                           relative=True,
+                                           percent=percent_rel_res)
+        last_gs=(last_gs[1]+space,last_gs[1]+space+height)
+        ax2 = fig.add_subplot(gs[last_gs[0]:last_gs[1],0])
+        ax2.plot(x,rel_res)
+        ax2.grid(True)
+        ax2.set_title('Relative Residual')
         if percent_rel_res:
-            ax1.set_ylabel('%')
+            ax2.set_ylabel('% error')
         
 
     if xlim is None:
@@ -380,6 +400,6 @@ if __name__ == '__main__':
                                      center_freq = fltbnk.center_freq,
                                      orig_sig_date=f'[{args["start_year"]}-{args['start_month']}-{args['start_day']}]',
                                      plot_reconstruction=True,
-                                     plot_residual=True,
-                                     relative_residual=True,
+                                     plot_direct_residual=True,
+                                     plot_rel_residual=True,
                                      percent_rel_res=True)

@@ -34,12 +34,15 @@ warnings.filterwarnings("ignore")
 # %% Get data
 
 year = '2019'
-month = '05'
+month = '06'
+day = '01'
 test_cdf_file_path =_MODEL_DIR+fba._OMNI_MAG_DATA_DIR+ year +'/omni_hro_1min_'+ year+month+'01_v01.cdf'
 
-mag_df = fba.get_test_data(fname_full_path=test_cdf_file_path)
-cols = ['BY_GSE']
-mag_df=mag_df[cols]
+mag_df = fba.get_test_data(fname_full_path=test_cdf_file_path,
+                           start_date=dt.datetime(year=int(year),month=int(month),day=int(day),hour=0),
+                           end_date=dt.datetime(year=int(year),month=int(month),day=int(day)+1,hour=0))
+cols = 'B_mag'
+mag_df=mag_df[[cols]]
 mag_df
 # mag_df = mag_df-mag_df.mean()  # Include this for fair comparison of DC and/or HF true or false (if both are true, original signal can be reconstructed regardless)
 
@@ -104,7 +107,7 @@ mag_df.interpolate(method='index', kind='linear',limit_direction='both',inplace=
 # %% Moving average filterbanks
 DTSM = bfb.filterbank(data_len=len(mag_df),
                     cadence=dt.timedelta(seconds=60))
-DTSM.build_DTSM_fb(windows=[2000,6000,18000,54000])
+DTSM.build_DTSM_fb(windows=[2000,6000,10000,18000,54000])
 
 DTSM.add_mvgavg_DC_HF()
 bfb.visualize_filterbank(fb_matrix=DTSM.fb_matrix,
@@ -147,34 +150,40 @@ plt.show()
 # # Apply filterbanks to get a collection of deconstructed signals
 
 # %%
-# TODO: Remove PAA application parts for filterbank paper purposes
-# %%
 DTSM_filtered = fba.get_filtered_signals(data_df=mag_df,
                                          fb_matrix=DTSM.fb_matrix,
                                          fftfreq=DTSM.freq_spectrum['hertz'],
-                                         data_col='BY_GSE',
+                                         data_col=cols,
                                          cadence=dt.timedelta(minutes=1))
 fba.view_filter_decomposition(data_df=mag_df,
                             fb_matrix=DTSM.fb_matrix,
                             fftfreq=DTSM.freq_spectrum['hertz'],
-                            data_col='BY_GSE',
+                            data_col=cols,
                             cadence=dt.timedelta(minutes=1),
                             xlim = (0,DTSM.center_freq[-1]),
-                            center_freq = DTSM.center_freq,)
+                            center_freq = DTSM.center_freq,
+                            plot_reconstruction=True,
+                            plot_direct_residual=True,
+                            plot_rel_residual=True,
+                            percent_rel_res=True)
 
 # %%
 tri_filtered = fba.get_filtered_signals(data_df=mag_df,
                                         fb_matrix=tri.fb_matrix,
                                         fftfreq=tri.freq_spectrum['hertz'],
-                                        data_col='BY_GSE',
+                                        data_col=cols,
                                         cadence=dt.timedelta(minutes=1))
 fba.view_filter_decomposition(data_df=mag_df,
                             fb_matrix=tri.fb_matrix,
                             fftfreq=tri.freq_spectrum['hertz'],
-                            data_col='BY_GSE',
+                            data_col=cols,
                             cadence=dt.timedelta(minutes=1),
                             xlim = (0,tri.center_freq[-1]),
-                            center_freq = tri.center_freq,)
+                            center_freq = tri.center_freq,
+                            plot_reconstruction=True,
+                            plot_direct_residual=True,
+                            plot_rel_residual=True,
+                            percent_rel_res=True)
 
 # %% [markdown]
 # ## "bank" of filtered signals from applying smoothing & detrending in time domain
@@ -187,7 +196,7 @@ for i,w in enumerate(DTSM.windows[:-1]):
                                             cols=cols,
                                             detrend_window=dt.timedelta(seconds=w),
                                             smooth_window=dt.timedelta(seconds=DTSM.windows[i+1]))
-    convolution_filtered[i+1] = np.array(filtered[cols]).ravel()
+    convolution_filtered[i+1] = np.array(filtered).ravel()
 # DC
 if DTSM.DC:
     DC_filtered = tc.preprocess_smooth_detrend(mag_df=mag_df,
@@ -202,6 +211,7 @@ if DTSM.HF:
                                             detrend_window=dt.timedelta(seconds=min(DTSM.windows)),
                                             smooth_window=dt.timedelta(seconds=0))
     convolution_filtered[-1] = np.array(HF_filtered).ravel()
+
 
 # %% [markdown]
 # # Compare reconstructed signals (by summing all filtered signals)
@@ -235,24 +245,33 @@ plt.legend()
 plt.show()
 
 # %% Plot Original vs. Convolution vs. Triangles
-sums = {'DTSM':sum_DTSM_filtered,
-        'Convolution': sum_conv_filtered,
-        'Triangles':sum_tri_filtered}
-for i,selection in enumerate(['DTSM','Convolution','Triangles']):
-    plt.figure(figsize=(10,5))
-    plt.plot(mag_df.index,real,label='original data')
-    plt.plot(mag_df.index,sums[selection],linestyle='dashed',label=f'$\sum$ {selection}')
-    plt.title('Compare reconstructed signals directly with original')
-    plt.xlabel('Date & Time (MM-DD-HH)')
-    plt.ylabel('Magnetic field (nT)')
-    plt.legend()
-    plt.show()
+# sums = {'DTSM':sum_DTSM_filtered,
+#         'Convolution': sum_conv_filtered,
+#         'Triangles':sum_tri_filtered}
+# for i,selection in enumerate(['DTSM','Convolution','Triangles']):
+#     plt.figure(figsize=(10,5))
+#     plt.plot(mag_df.index,real,label='original data')
+#     plt.plot(mag_df.index,sums[selection],linestyle='dashed',label=f'$\sum$ {selection}')
+#     plt.title('Compare reconstructed signals directly with original')
+#     plt.xlabel('Date & Time (MM-DD-HH)')
+#     plt.ylabel('Magnetic field (nT)')
+#     plt.legend()
+#     plt.show()
 
 
 # %% residuals
-DTSM_residual = real-sum_DTSM_filtered
-tri_residual = real-sum_tri_filtered
-conv_residual = real - sum_conv_filtered
+DTSM_residual = fba.get_reconstruction_residuals(filtered_df=DTSM_filtered,
+                                                 real_signal=real,
+                                                 relative=False,
+                                                 absolute=False)
+tri_residual = fba.get_reconstruction_residuals(filtered_df=tri_filtered,
+                                                real_signal=real,
+                                                relative=False,
+                                                absolute=False)
+conv_residual = fba.get_reconstruction_residuals(filtered_df=convolution_filtered,
+                                                 real_signal=real,
+                                                 relative=False,
+                                                 absolute=False)
 
 residuals = {'DTSM':DTSM_residual,
             'Triangles':tri_residual,
@@ -274,9 +293,21 @@ plt.show()
 
 
 # %% relative residuals
-DTSM_rel_residual = DTSM_residual/real
-tri_rel_residual = tri_residual/real
-conv_rel_residual = conv_residual/real
+DTSM_rel_residual = fba.get_reconstruction_residuals(filtered_df=DTSM_filtered,
+                                                     real_signal=real,
+                                                     relative=True,
+                                                     percent=True,
+                                                     absolute=False)
+tri_rel_residual = fba.get_reconstruction_residuals(filtered_df=tri_filtered,
+                                                    real_signal=real,
+                                                    relative=True,
+                                                    percent=True,
+                                                    absolute=False)
+conv_rel_residual = fba.get_reconstruction_residuals(filtered_df=convolution_filtered,
+                                                     real_signal=real,
+                                                     relative=True,
+                                                     percent=True,
+                                                     absolute=False)
 
 rel_residuals = {'DTSM':DTSM_rel_residual,
             'Triangles':tri_rel_residual,
@@ -289,106 +320,7 @@ for i,selection in enumerate(['DTSM','Convolution','Triangles']):
              label=f'{selection}')
     plt.legend()
 plt.xlabel('Index')
-plt.ylabel('Relative Residual')
+plt.ylabel('Relative Residual (%)')
 plt.title('Relative Residual of reconstructed signals compared with original data signal')
 plt.grid()
 plt.show()
-
-# %% Excess power in relation to number of filters
-winds = [500,1000,1500,2250]
-lens1 = []
-max_excess1=[]
-for i in range(25):
-   
-    DTSM = bfb.filterbank(data_len=len(mag_df),
-                        cadence=dt.timedelta(seconds=60))
-    # DTSM.build_DTSM_fb(windows=[500,1000,2000,5000,18000,21000,54000])
-    DTSM.build_DTSM_fb(windows=winds)
-    DTSM.add_mvgavg_DC_HF()
-
-    lens1.append(DTSM.fb_matrix.shape[0])
-    amp_sum = np.sum(abs(DTSM.fb_matrix),axis=0) - 1
-    max_excess1.append(max(amp_sum))
-
-    plt.plot(DTSM.freq_spectrum['hertz'],amp_sum)
-    plt.xlabel('Frequency (hz)')
-    plt.title('Sum of filter amplitudes across all frequencies')
-    plt.legend()
-
-    winds.append(winds[-1]+(winds[-1]/2))
-plt.show()
-# %%
-plt.figure()
-plt.plot(lens1,max_excess1)
-plt.plot(lens1,max_excess1,'o')
-plt.title('Max Excess vs. Number of Filters')
-plt.xlabel('Number of Filters')
-plt.ylabel('Excess Amplitude (above 1)')
-plt.grid()
-plt.show()
-# %%
-winds = [500,1000,1500,2250]
-lens2 = []
-max_excess2=[]
-rel_res = []
-max_abs_rel_res =[]
-for i in range(50):
-   
-    DTSM = bfb.filterbank(data_len=len(mag_df),
-                        cadence=dt.timedelta(seconds=60))
-    # DTSM.build_DTSM_fb(windows=[500,1000,2000,5000,18000,21000,54000])
-    DTSM.build_DTSM_fb(windows=winds)
-    DTSM.add_mvgavg_DC_HF()
-
-    DTSM_filtered = fba.get_filtered_signals(data_df=mag_df,
-                                             fb_matrix=DTSM.fb_matrix,
-                                             fftfreq=DTSM.freq_spectrum['hertz'],
-                                             data_col='BY_GSE',
-                                             cadence=dt.timedelta(minutes=1))
-    # fba.view_filter_decomposition(data_df=mag_df,
-    #                             fb_matrix=DTSM.fb_matrix,
-    #                             fftfreq=DTSM.freq_spectrum['hertz'],
-    #                             data_col='BY_GSE',
-    #                             cadence=dt.timedelta(minutes=1),
-    #                             xlim = (0,DTSM.center_freq[-1]),
-    #                             center_freq = DTSM.center_freq,)
-    sum_DTSM_filtered = np.sum(DTSM_filtered,axis=0)
-    res = np.abs((sum_DTSM_filtered-real)/real)
-    rel_res.append(res)
-    max_abs_rel_res.append(np.max(res))
-
-    lens2.append(DTSM.fb_matrix.shape[0])
-    amp_sum = np.sum(abs(DTSM.fb_matrix),axis=0) - 1
-    max_excess2.append(max(amp_sum))
-
-    plt.plot(DTSM.freq_spectrum['hertz'],amp_sum)
-    plt.xlabel('Frequency (hz)')
-    plt.title('Sum of filter amplitudes across all frequencies')
-    plt.legend()
-
-    winds.append(winds[-1]*5)
-plt.show()
-# %%
-plt.figure()
-plt.plot(lens2,max_excess2)
-plt.plot(lens2,max_excess2,'o')
-plt.plot(lens1,max_excess1,'o')
-plt.title('Max Excess vs. Number of Filters')
-plt.xlabel('Number of Filters')
-plt.ylabel('Excess Amplitude (above 1)')
-plt.grid()
-plt.show()
-# %%
-plt.figure()
-plt.plot(lens2,max_abs_rel_res)
-plt.xlabel('Number of Filters')
-plt.ylabel('Max |relative residual|')
-plt.title('Max |relative residual| vs. number of filters')
-plt.grid()
-# %%
-plt.figure()
-plt.plot(max_excess2,np.array(max_abs_rel_res))
-plt.xlabel('Max Excess Power')
-plt.ylabel('Max |relative residual|')
-plt.grid()
-# %%
