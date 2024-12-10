@@ -94,6 +94,18 @@ parser.add_argument(
     ),
     type=int
 )
+parser.add_argument(
+    '-absolute_residual',
+    help='Whether or not to use absolute value of residuals',
+    default=True,
+    action='store_true'
+)
+parser.add_argument(
+    '-residual_epsilon',
+    help='Epsilon in denominator of relative residual calculation (to minimize effect of dividing by near zero).',
+    default=0.01,
+    type=float
+)
 
 def get_test_data(fname_full_path=None,
                   fname = None,
@@ -195,8 +207,9 @@ def get_filtered_signals(data_df,
 
 def get_reconstruction_residuals(filtered_df,
                                  real_signal,
+                                 epsilon=0.01,
                                  relative=True,
-                                 absolute=False,
+                                 absolute=True,
                                  percent=False
                                  ):
     reconstruction = np.sum(filtered_df,axis=0)
@@ -204,9 +217,12 @@ def get_reconstruction_residuals(filtered_df,
 
     if absolute:
         residual=np.abs(residual)
+        real_signal = np.abs(real_signal)
 
     if relative:
-        rel_residual = residual/real_signal
+        if not absolute:
+            epsilon=0
+        rel_residual = residual/(real_signal+epsilon)
         if percent:
             return rel_residual*100
         return rel_residual
@@ -229,7 +245,9 @@ def view_filter_decomposition(data_df,
                                      plot_reconstruction=False,
                                      plot_direct_residual = False,
                                      plot_rel_residual=False,
-                                     percent_rel_res = True
+                                     abs_residual=True,
+                                     percent_rel_res = True,
+                                     res_eps = 0.01,
                                      ):
     """Plot comprehensive visualization of filterbank and its application to a set of test data.
     Plot includes the filterbank, raw test data, decomposition of filterbank preprocessed data.
@@ -239,7 +257,7 @@ def view_filter_decomposition(data_df,
     
     """
     fig = plt.figure(figsize=figsize)
-    gs = fig.add_gridspec(ncols = 3, nrows = fb_matrix.shape[0]*2,
+    gs = fig.add_gridspec(ncols = 2, nrows = fb_matrix.shape[0]*2,
                           figure = fig,
                           wspace=gs_wspace, hspace=gs_hspace)
     
@@ -257,9 +275,14 @@ def view_filter_decomposition(data_df,
     for i in range(fb_matrix.shape[0]):
 
         ax0 = fig.add_subplot(gs[2*i:2*i+2,1])    
-        ax0.plot(x, filtered_df[i],label=f'center_freq = {center_freq[i]:.2e}')
+        ax0.plot(filtered_df[i])
+        ax0.text(x=0.0,y=max(filtered_df[i]),s=f'center freq = {center_freq[i]:.2e}',
+                 ha='left',va='top',
+                 fontweight='bold',
+                 bbox=dict(facecolor='white', edgecolor='black',alpha=0.7))
         ax0.set_xticks([])
         ax0.set_yticks([])
+        # ax0.set_ylim(min(filtered_df[i]),max(filtered_df[i])+(max(filtered_df[i])*0.5))
         ax0.legend(loc='upper right',bbox_to_anchor=(1.4, 1))
 
         if i==0:
@@ -268,22 +291,22 @@ def view_filter_decomposition(data_df,
     if fb_matrix.shape[0]<6:
         os_gs = (3,4)
         height=1
-        space=1
+        # space=1
     else:
         os_gs = (4,6)
         height=2
-        space=1
+        # space=1
         
 
     
     ax0 = fig.add_subplot(gs[os_gs[0]:os_gs[1],0])   
     ax0.plot(x, y,label='original')
     ax0.set_ylabel('(nT)')
-    ax0.grid(True)
     ax0.set_title(orig_sig_date+f' Original series ({data_col})')
-    
     # ax0.set_xticks([])
     # ax0.set_yticks([])
+    ax0.grid(True)
+
     last_gs = os_gs
     if plot_reconstruction:
         ax0.plot(x,np.sum(filtered_df,axis=0),linestyle='dotted',label='filterbank reconstruction')
@@ -292,23 +315,34 @@ def view_filter_decomposition(data_df,
         res = get_reconstruction_residuals(filtered_df=filtered_df,
                                            real_signal=y,
                                            relative=False,
-                                           percent=False)
-        last_gs=(last_gs[1]+space,last_gs[1]+space+height)
+                                           percent=False,
+                                           absolute=abs_residual)
+        last_gs=(last_gs[1],last_gs[1]+height)
         ax1 = fig.add_subplot(gs[last_gs[0]:last_gs[1],0])
-        ax1.plot(x,res)
-        ax1.set_title('Direct Residual')
+        ax1.plot(res)
+        ax1.set_title('Direct Residual',y=1.0,pad=-14,
+                    #   fontweight='bold',
+                      bbox=dict(facecolor='white', edgecolor='black',alpha=0.7))
         ax1.set_ylabel('(nT)')
+        ax1.set_ylim(min(res),max(res)+(max(res)*0.5))
+        # ax1.set_xticks([])
         ax1.grid(True)
     if plot_rel_residual:
         rel_res = get_reconstruction_residuals(filtered_df=filtered_df,
                                            real_signal=y,
                                            relative=True,
-                                           percent=percent_rel_res)
-        last_gs=(last_gs[1]+space,last_gs[1]+space+height)
+                                           percent=percent_rel_res,
+                                           absolute=abs_residual,
+                                           epsilon=res_eps)
+        last_gs=(last_gs[1],last_gs[1]+height)
         ax2 = fig.add_subplot(gs[last_gs[0]:last_gs[1],0])
-        ax2.plot(x,rel_res)
+        ax2.plot(rel_res)
         ax2.grid(True)
-        ax2.set_title('Relative Residual')
+        ax2.set_ylim(min(rel_res),max(rel_res)+(max(rel_res)*0.5))
+        # ax2.set_xticks([])
+        ax2.set_title('Relative Residual',y=1.0,pad=-14,
+                    #   fontweight='bold',
+                      bbox=dict(facecolor='white', edgecolor='black',alpha=0.7))
         if percent_rel_res:
             ax2.set_ylabel('% error')
         
@@ -402,4 +436,6 @@ if __name__ == '__main__':
                                      plot_reconstruction=True,
                                      plot_direct_residual=True,
                                      plot_rel_residual=True,
-                                     percent_rel_res=True)
+                                     percent_rel_res=True,
+                                     abs_residual=args['absolute_residual'],
+                                     res_eps=args['residual_epsilon'])

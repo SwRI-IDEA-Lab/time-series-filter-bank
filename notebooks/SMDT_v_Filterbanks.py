@@ -41,12 +41,11 @@ test_cdf_file_path =_MODEL_DIR+fba._OMNI_MAG_DATA_DIR+ year +'/omni_hro_1min_'+ 
 mag_df = fba.get_test_data(fname_full_path=test_cdf_file_path,
                            start_date=dt.datetime(year=int(year),month=int(month),day=int(day),hour=0),
                            end_date=dt.datetime(year=int(year),month=int(month),day=int(day)+1,hour=0))
-cols = 'B_mag'
+cols = 'BX_GSE'
 mag_df=mag_df[[cols]]
 mag_df
 # mag_df = mag_df-mag_df.mean()  # Include this for fair comparison of DC and/or HF true or false (if both are true, original signal can be reconstructed regardless)
 
-# %%
 # %% Prepare FT of test data for Fourier applications
 
 cadence = dt.timedelta(seconds=60)
@@ -138,8 +137,8 @@ plt.title('Both filterbank types in single plot')
 plt.show()
 
 # %% Sum of filterbank amplitudes
-plt.plot(DTSM.freq_spectrum['hertz'],np.sum(DTSM.fb_matrix,axis=0),label='$\sum$ DTSM filters')
-plt.plot(tri.freq_spectrum['hertz'],np.sum(tri.fb_matrix,axis=0),label='$\sum$ triangles filters')
+plt.plot(DTSM.freq_spectrum['hertz'],np.sum(DTSM.fb_matrix,axis=0),label=f'$\sum$ Moving Avg. filters ({DTSM.fb_matrix.shape[0]} filters)')
+plt.plot(tri.freq_spectrum['hertz'],np.sum(tri.fb_matrix,axis=0),label='$\sum$ Mel filters')
 plt.xlabel('Frequency (hz)')
 plt.title('Sum of filter amplitudes across all frequencies')
 plt.legend()
@@ -162,10 +161,13 @@ fba.view_filter_decomposition(data_df=mag_df,
                             cadence=dt.timedelta(minutes=1),
                             xlim = (0,DTSM.center_freq[-1]),
                             center_freq = DTSM.center_freq,
+                            orig_sig_date=f'[{year}-{month}-{day}]',
                             plot_reconstruction=True,
                             plot_direct_residual=True,
                             plot_rel_residual=True,
-                            percent_rel_res=True)
+                            percent_rel_res=True,
+                            abs_residual=True,
+                            res_eps=0.05)
 
 # %%
 tri_filtered = fba.get_filtered_signals(data_df=mag_df,
@@ -180,10 +182,13 @@ fba.view_filter_decomposition(data_df=mag_df,
                             cadence=dt.timedelta(minutes=1),
                             xlim = (0,tri.center_freq[-1]),
                             center_freq = tri.center_freq,
+                            orig_sig_date=f'[{year}-{month}-{day}]',
                             plot_reconstruction=True,
                             plot_direct_residual=True,
                             plot_rel_residual=True,
-                            percent_rel_res=True)
+                            percent_rel_res=True,
+                            abs_residual=True,
+                            res_eps=0.05)
 
 # %% [markdown]
 # ## "bank" of filtered signals from applying smoothing & detrending in time domain
