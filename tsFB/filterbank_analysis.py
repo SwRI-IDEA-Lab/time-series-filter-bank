@@ -286,7 +286,7 @@ def view_filter_decomposition(data_df,
         ax0.legend(loc='upper right',bbox_to_anchor=(1.4, 1))
 
         if i==0:
-            ax0.set_title('Signal decomposition')
+            ax0.set_title('Signal decomposition',fontsize=15)
         
     if fb_matrix.shape[0]<6:
         os_gs = (3,4)
@@ -309,8 +309,8 @@ def view_filter_decomposition(data_df,
 
     last_gs = os_gs
     if plot_reconstruction:
-        ax0.plot(x,np.sum(filtered_df,axis=0),linestyle='dotted',label='filterbank reconstruction')
-        ax0.legend(loc='upper right',bbox_to_anchor=(1.1, 1.2),fontsize=6)
+        ax0.plot(x,np.sum(filtered_df,axis=0),linestyle='dotted',alpha=0.9,label='filterbank reconstruction')
+        ax0.legend(loc='upper right',bbox_to_anchor=(1.1, 1.2))
     if plot_direct_residual:
         res = get_reconstruction_residuals(filtered_df=filtered_df,
                                            real_signal=y,
