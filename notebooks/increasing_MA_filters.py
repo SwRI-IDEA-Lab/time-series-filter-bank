@@ -74,8 +74,7 @@ for i in range(25):
     plt.xlabel('Frequency (hz)')
     plt.title('Sum of filter amplitudes across all frequencies')
     plt.grid()
-    plt.legend()
-
+    
     winds.append(winds[-1]+(winds[-1]/2))
 plt.show()
 # %%
@@ -119,7 +118,6 @@ for i in range(50):
     plt.plot(DTSM.freq_spectrum['hertz'],amp_sum)
     plt.xlabel('Frequency (hz)')
     plt.title('Sum of filter amplitudes across all frequencies')
-    plt.legend()
 
     winds.append(winds[-1]*5)
 plt.show()
