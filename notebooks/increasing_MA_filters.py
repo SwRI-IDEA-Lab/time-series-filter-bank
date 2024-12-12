@@ -74,7 +74,7 @@ for i in range(25):
     plt.xlabel('Frequency (hz)')
     plt.title('Sum of filter amplitudes across all frequencies')
     plt.grid()
-    
+
     winds.append(winds[-1]+(winds[-1]/2))
 plt.show()
 # %%
@@ -90,8 +90,7 @@ plt.show()
 winds = [500,1000,1500,2250]
 lens2 = []
 max_excess2=[]
-rel_res = []
-max_abs_rel_res =[]
+
 for i in range(50):
    
     DTSM = bfb.filterbank(data_len=len(mag_df),
@@ -107,9 +106,6 @@ for i in range(50):
                                                             cadence=dt.timedelta(minutes=1),
                                                             )
     sum_DTSM_filtered = np.sum(DTSM_filtered,axis=0)
-    res = np.abs((sum_DTSM_filtered-real)/real)
-    rel_res.append(res)
-    max_abs_rel_res.append(np.max(res))
 
     lens2.append(DTSM.fb_matrix.shape[0])
     amp_sum = np.sum(abs(DTSM.fb_matrix),axis=0)
