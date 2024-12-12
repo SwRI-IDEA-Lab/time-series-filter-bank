@@ -235,9 +235,9 @@ def view_filter_decomposition(data_df,
                                      fftfreq,
                                      data_col = None,
                                      cadence = dt.timedelta(seconds=300),
-                                     figsize=(24,8),
+                                     figsize=(4,11),
                                      gs_wspace = 0.2,
-                                     gs_hspace = 0,
+                                     gs_hspace = 0.5,
                                      xlim = None,
                                      center_freq = None,
                                      filterbank_plot_title='Filter bank',
@@ -257,7 +257,7 @@ def view_filter_decomposition(data_df,
     
     """
     fig = plt.figure(figsize=figsize)
-    gs = fig.add_gridspec(ncols = 2, nrows = fb_matrix.shape[0]*2,
+    gs = gridspec.GridSpec(ncols = 1, nrows = fb_matrix.shape[0]+6,
                           figure = fig,
                           wspace=gs_wspace, hspace=gs_hspace)
     
@@ -266,90 +266,10 @@ def view_filter_decomposition(data_df,
     x = data_df.index
     y = data_df[data_col]
 
-    filtered_df = get_filtered_signals(data_df=data_df,
-                                       fb_matrix=fb_matrix,
-                                       fftfreq=fftfreq,
-                                       data_col=data_col,
-                                       cadence=cadence)
-    
-    for i in range(fb_matrix.shape[0]):
-
-        ax0 = fig.add_subplot(gs[2*i:2*i+2,1])    
-        ax0.plot(filtered_df[i])
-        ax0.text(x=0.0,y=max(filtered_df[i]),s=f'center freq = {center_freq[i]:.2e}',
-                 ha='left',va='top',
-                 fontweight='bold',
-                 bbox=dict(facecolor='white', edgecolor='black',alpha=0.7))
-        ax0.set_xticks([])
-        ax0.set_yticks([])
-        # ax0.set_ylim(min(filtered_df[i]),max(filtered_df[i])+(max(filtered_df[i])*0.5))
-        ax0.legend(loc='upper right',bbox_to_anchor=(1.4, 1))
-
-        if i==0:
-            ax0.set_title('Signal decomposition',fontsize=15)
-        
-    if fb_matrix.shape[0]<6:
-        os_gs = (3,4)
-        height=1
-        # space=1
-    else:
-        os_gs = (4,6)
-        height=2
-        # space=1
-        
-
-    
-    ax0 = fig.add_subplot(gs[os_gs[0]:os_gs[1],0])   
-    ax0.plot(x, y,label='original')
-    ax0.set_ylabel('(nT)')
-    ax0.set_title(orig_sig_date+f' Original series ({data_col})')
-    # ax0.set_xticks([])
-    # ax0.set_yticks([])
-    ax0.grid(True)
-
-    last_gs = os_gs
-    if plot_reconstruction:
-        ax0.plot(x,np.sum(filtered_df,axis=0),linestyle='dotted',alpha=0.9,label='filterbank reconstruction')
-        ax0.legend(loc='upper right',bbox_to_anchor=(1.1, 1.2))
-    if plot_direct_residual:
-        res = get_reconstruction_residuals(filtered_df=filtered_df,
-                                           real_signal=y,
-                                           relative=False,
-                                           percent=False,
-                                           absolute=abs_residual)
-        last_gs=(last_gs[1],last_gs[1]+height)
-        ax1 = fig.add_subplot(gs[last_gs[0]:last_gs[1],0])
-        ax1.plot(res)
-        ax1.set_title('Direct Residual',y=1.0,pad=-14,
-                    #   fontweight='bold',
-                      bbox=dict(facecolor='white', edgecolor='black',alpha=0.7))
-        ax1.set_ylabel('(nT)')
-        ax1.set_ylim(min(res),max(res)+(max(res)*0.5))
-        # ax1.set_xticks([])
-        ax1.grid(True)
-    if plot_rel_residual:
-        rel_res = get_reconstruction_residuals(filtered_df=filtered_df,
-                                           real_signal=y,
-                                           relative=True,
-                                           percent=percent_rel_res,
-                                           absolute=abs_residual,
-                                           epsilon=res_eps)
-        last_gs=(last_gs[1],last_gs[1]+height)
-        ax2 = fig.add_subplot(gs[last_gs[0]:last_gs[1],0])
-        ax2.plot(rel_res)
-        ax2.grid(True)
-        ax2.set_ylim(min(rel_res),max(rel_res)+(max(rel_res)*0.5))
-        # ax2.set_xticks([])
-        ax2.set_title('Relative Residual',y=1.0,pad=-14,
-                    #   fontweight='bold',
-                      bbox=dict(facecolor='white', edgecolor='black',alpha=0.7))
-        if percent_rel_res:
-            ax2.set_ylabel('% error')
-        
-
+    # Filterbank plot
     if xlim is None:
         xlim = (fftfreq[0],fftfreq[-1])
-    ax = fig.add_subplot(gs[0:2,0])  
+    ax = fig.add_subplot(gs[0:1])  
     ax.plot(fftfreq, fb_matrix.T)
     ax.grid(True)
     # ax.set_ylabel('Weight')
@@ -357,7 +277,92 @@ def view_filter_decomposition(data_df,
     ax.set_xlim(xlim)
     ax.set_title(filterbank_plot_title)
     ax.set_xticks(center_freq)
+    ax.tick_params(rotation=35,labelsize=8,axis='x')
     ax.ticklabel_format(style='sci',scilimits=(0,0),axis='x')
+    
+    # Filtered Signal Decomposition
+    filtered_df = get_filtered_signals(data_df=data_df,
+                                       fb_matrix=fb_matrix,
+                                       fftfreq=fftfreq,
+                                       data_col=data_col,
+                                       cadence=cadence)
+    gs2 = gridspec.GridSpecFromSubplotSpec(ncols=1,nrows=fb_matrix.shape[0]*2, subplot_spec=gs[6:-1],hspace=0)
+    for i,bank in enumerate(filtered_df):
+
+        ax0 = fig.add_subplot(gs2[2*i:2*i+2])    
+        ax0.plot(bank)
+        ax0.text(x=0.0,y=max(bank),s=f'center freq = {center_freq[i]:.2e}',
+                 ha='left',va='top',
+                #  fontweight='bold',
+                fontsize=8,
+                 bbox=dict(facecolor='white', edgecolor='black',alpha=0.7))
+        ax0.set_xticks([])
+        ax0.set_yticks([])
+        # ax0.set_ylim(min(filtered_df[i]),max(filtered_df[i])+(max(filtered_df[i])*0.5))
+
+        if i==0:
+            ax0.set_title('Signal decomposition',fontsize=15)
+        
+    # Original series
+    gs1 = gridspec.GridSpecFromSubplotSpec(ncols = 1, nrows = 6, subplot_spec=gs[2:5],hspace=0)
+    ax0 = fig.add_subplot(gs1[0:2])   
+    ax0.plot(x, y,label='original')
+    ax0.set_ylabel('(nT)')
+    ax0.set_title(orig_sig_date+f' Original series ({data_col})')
+    ax0.tick_params(labelbottom=False)
+    # ax0.set_xticks([])
+    # ax0.set_yticks([])
+    ax0.grid(True)
+
+    # Reconstruction (on top of original)
+    last_gs = 0
+    if plot_reconstruction:
+        ax0.plot(x,np.sum(filtered_df,axis=0),linestyle='dotted',alpha=0.9,label='filterbank reconstruction')
+        ax0.legend(loc='upper right',bbox_to_anchor=(1.1, 1.2),fontsize=8)
+    
+    # Direct Residual
+    if plot_direct_residual:
+        res = get_reconstruction_residuals(filtered_df=filtered_df,
+                                           real_signal=y,
+                                           relative=False,
+                                           percent=False,
+                                           absolute=abs_residual)
+        last_gs+=2
+        ax1 = fig.add_subplot(gs1[last_gs:last_gs+2])
+        ax1.plot(x,res)
+        ax1.set_title('Direct Residual',y=1.0,pad=-14,
+                    #   fontweight='bold',
+                    fontsize=10,
+                      bbox=dict(facecolor='white', edgecolor='black',alpha=0.7))
+        ax1.tick_params(labelbottom=False)
+        ax1.set_ylabel('(nT)')
+        ax1.set_ylim(min(res),max(res)+(max(res)*0.5))
+        # ax1.get_xaxis().set_visible(False)
+        # ax1.set_xticks([])
+        ax1.grid(True)
+
+    # Relative Residual
+    if plot_rel_residual:
+        rel_res = get_reconstruction_residuals(filtered_df=filtered_df,
+                                           real_signal=y,
+                                           relative=True,
+                                           percent=percent_rel_res,
+                                           absolute=abs_residual,
+                                           epsilon=res_eps)
+        last_gs+=2
+        ax2 = fig.add_subplot(gs1[last_gs:last_gs+2])
+        ax2.plot(x,rel_res)
+        ax2.grid(True)
+        ax2.set_ylim(min(rel_res),max(rel_res)+(max(rel_res)*0.5))
+        ax2.tick_params(labelbottom=False)
+        # ax2.set_xticks([])
+        ax2.set_title('Relative Residual',y=1.0,pad=-14,
+                    #   fontweight='bold',
+                    fontsize=10,
+                      bbox=dict(facecolor='white', edgecolor='black',alpha=0.7))
+        if percent_rel_res:
+            ax2.set_ylabel('% error')
+        ax2.set_xlabel('Time')
     plt.show()
     
 
