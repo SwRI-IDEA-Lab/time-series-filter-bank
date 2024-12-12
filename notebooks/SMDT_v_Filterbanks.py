@@ -106,7 +106,7 @@ mag_df.interpolate(method='index', kind='linear',limit_direction='both',inplace=
 # %% Moving average filterbanks
 DTSM = bfb.filterbank(data_len=len(mag_df),
                     cadence=dt.timedelta(seconds=60))
-DTSM.build_DTSM_fb(windows=[2000,6000,10000,18000,54000])
+DTSM.build_DTSM_fb(windows=[500,1000,2000,4000,8000])
 
 DTSM.add_mvgavg_DC_HF()
 bfb.visualize_filterbank(fb_matrix=DTSM.fb_matrix,
@@ -162,6 +162,7 @@ fba.view_filter_decomposition(data_df=mag_df,
                             cadence=dt.timedelta(minutes=1),
                             xlim = (0,DTSM.center_freq[-1]),
                             center_freq = DTSM.center_freq,
+                            filterbank_plot_title='Moving Average Filter Bank',
                             orig_sig_date=f'[{year}-{month}-{day}]',
                             plot_reconstruction=True,
                             plot_direct_residual=True,
@@ -183,6 +184,7 @@ fba.view_filter_decomposition(data_df=mag_df,
                             cadence=dt.timedelta(minutes=1),
                             xlim = (0,tri.center_freq[-1]),
                             center_freq = tri.center_freq,
+                            filterbank_plot_title='Mel Filter bank',
                             orig_sig_date=f'[{year}-{month}-{day}]',
                             plot_reconstruction=True,
                             plot_direct_residual=True,
