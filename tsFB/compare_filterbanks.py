@@ -329,16 +329,9 @@ class compare_FB:
         x = data_df.index
         y = data_df[data_col]
 
-        fig = plt.figure(figsize=figsize)
-        gs = gridspec.GridSpec(ncols = 2, nrows = self.n_filters+6,
-                            figure = fig,
-                            wspace=gs_wspace, hspace=gs_hspace)
-
-        
-        
         # Filtered Signal Decomposition
-        filterbanks = {'Moving Average Filter Bank':self.MA_fb,
-                       'Mel Filter Bank':self.Tri_fb}
+        filterbanks = {'Moving Average':self.MA_fb,
+                       'Mel':self.Tri_fb}
         filtered_sigs = {}
         dir_residuals = {}
         rel_residuals = {}
@@ -371,6 +364,11 @@ class compare_FB:
             rel_residuals[fb_name] = rel_res
         
         
+        fig = plt.figure(figsize=figsize)
+        gs = gridspec.GridSpec(ncols = 2, nrows = self.n_filters+6,
+                            figure = fig,
+                            wspace=gs_wspace, hspace=gs_hspace)
+        
         for i, fb_name in enumerate(filterbanks.keys()):
             fltrbnk = filterbanks[fb_name]
             # Filterbank plot
@@ -381,7 +379,7 @@ class compare_FB:
             # ax.set_ylabel('Weight')
             ax.set_xlabel('Frequency (Hz)')
             ax.set_xlim(xlim)
-            ax.set_title(fb_name)
+            ax.set_title(fb_name+' Filter Bank')
             ax.set_xticks(fltrbnk.center_freq)
             ax.tick_params(rotation=35,labelsize=8,axis='x')
             ax.ticklabel_format(style='sci',scilimits=(0,0),axis='x')
@@ -408,60 +406,57 @@ class compare_FB:
                 if j==0:
                     ax0.set_title('Signal decomposition',fontsize=15)
             
-            # Original series
-            gs1 = gridspec.GridSpecFromSubplotSpec(ncols = 1, nrows = 6, subplot_spec=gs[2:5,i],hspace=0)
-            ax0 = fig.add_subplot(gs1[0:2])   
-            ax0.plot(x, y,label='original')
-            if i==0:
-                ax0.set_ylabel('(nT)')
-                ax0.set_title(orig_sig_date+f' Original series ({data_col})')
-            else:
-                ax0.tick_params(labelleft=False)
-            ax0.tick_params(labelbottom=False)
-            ax0.grid(True)
+        # Original series
+        gs1 = gridspec.GridSpecFromSubplotSpec(ncols = 1, nrows = 6, subplot_spec=gs[2:5,0:],hspace=0)
+        ax0 = fig.add_subplot(gs1[0:2])   
+        ax0.plot(x, y,color='black',label='original')
+        ax0.set_ylabel('(nT)')
+        ax0.set_title(orig_sig_date+f' Original series ({data_col})')
+        ax0.tick_params(labelbottom=False)
+        ax0.grid(True)
 
-            # Reconstruction (on top of original)
-            last_gs = 0
-            if plot_reconstruction:
-                ax0.plot(x,np.sum(filtered_sigs[fb_name],axis=0),linestyle='dotted',alpha=0.9,label='filterbank \n reconstruction')
-                if i==1:
-                    ax0.legend(loc='upper left',bbox_to_anchor=(-0.2, 1.5),fontsize=8)
-            
-            # Direct Residual
-            if plot_direct_residual:
+        # Reconstruction (on top of original)
+        last_gs = 0
+        # Direct Residual
+        if plot_direct_residual:
+            last_gs+=2
+            ax1 = fig.add_subplot(gs1[last_gs:last_gs+2])
+        if plot_rel_residual:
                 last_gs+=2
-                ax1 = fig.add_subplot(gs1[last_gs:last_gs+2])
-                ax1.plot(x,dir_residuals[fb_name])
+                ax2 = fig.add_subplot(gs1[last_gs:last_gs+2])
+
+        l_colors = {'Moving Average': 'tab:red',
+                    'Mel':'tab:green'}
+
+        for fb_name in filterbanks.keys():
+            
+            if plot_reconstruction:
+                ax0.plot(x,np.sum(filtered_sigs[fb_name],axis=0),linestyle='dotted',color=l_colors[fb_name],alpha=0.9,label=f'{fb_name} reconstruction')
+                ax0.legend(loc='upper right',bbox_to_anchor=(1.0, 1.2),fontsize=8)
+            
+            if plot_direct_residual:
+                ax1.plot(x,dir_residuals[fb_name],color=l_colors[fb_name],label=f'{fb_name}')
                 ax1.set_title('Direct Residual',y=1.0,pad=-14,
                             #   fontweight='bold',
                             fontsize=10,
                             bbox=dict(facecolor='white', edgecolor='black',alpha=0.7))
-                if i ==0:
-                    ax1.set_ylabel('(nT)')
-                    ax1.set_ylim(min(dir_residuals[fb_name]),
-                                 max(dir_residuals[fb_name])+(max(dir_residuals[fb_name])*0.5))
-                    first_ax1 = ax1
-                else:
-                    ax1.sharey(first_ax1)
-                    ax1.tick_params(labelleft=False)
+                
+                ax1.set_ylabel('(nT)')
+                # ax1.set_ylim(min(dir_residuals[fb_name]),
+                #                 max(dir_residuals[fb_name])+(max(dir_residuals[fb_name])*0.5))
                 ax1.tick_params(labelbottom=False)
                 ax1.grid(True)
 
             # Relative Residual
             if plot_rel_residual:
-                last_gs+=2
-                ax2 = fig.add_subplot(gs1[last_gs:last_gs+2])
-                ax2.plot(x,rel_residuals[fb_name])
-                if i == 0:
-                    ax2.set_ylim(min(rel_residuals[fb_name]),
-                                 max(rel_residuals[fb_name])+(max(rel_residuals[fb_name])*0.5))
-                    first_ax2 = ax2
+                ax2.plot(x,rel_residuals[fb_name],color=l_colors[fb_name],label=f'{fb_name}')
+                
+                # ax2.set_ylim(min(rel_residuals[fb_name]),
+                #                 max(rel_residuals[fb_name])+(max(rel_residuals[fb_name])*0.5))
 
-                    if percent_rel_res:
-                        ax2.set_ylabel('% error')
-                else:
-                    ax2.sharey(first_ax2)
-                    ax2.tick_params(labelleft=False)
+                if percent_rel_res:
+                    ax2.set_ylabel('% error')
+                
                 ax2.tick_params(labelbottom=False)
                 ax2.set_title('Relative Residual',y=1.0,pad=-14,
                             #   fontweight='bold',
@@ -522,7 +517,7 @@ if __name__ == '__main__':
                            cadence=dt.timedelta(seconds=60),
                            windows=[500,1000,2000,4000,8000])
     for col in mag_df.columns:
-        comp_anly.comp_decomp_v2(data_df=mag_df,
+        comp_anly.comp_decomp_v3(data_df=mag_df,
                                      data_col=col,
                                      orig_sig_date=f'[{args["start_year"]}-{args['start_month']}-{args['start_day']}]',
                                      figsize=(8.5,11),
