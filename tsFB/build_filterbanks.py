@@ -70,7 +70,7 @@ class filterbank:
         
         # placeholders
         self.fb_matrix = None
-        self.edge_freq = None
+        self.center_freq = {}
         # TODO: apply better SWE practice of using underscores for encapsulation of attributes
         self.DC = False
         self.HF = False
@@ -87,7 +87,8 @@ class filterbank:
     def build_triangle_fb(self, 
                           filter_freq_range = (0,5),
                           num_bands = 2,
-                          center_freq = None):
+                          center_freq = None,
+                          freq_units='hertz'):
         """Creates filterbank matrix of triangle filters.
 
         Parameters
@@ -115,6 +116,7 @@ class filterbank:
         else:
             if type(center_freq) == np.ndarray:
                 center_freq = center_freq.tolist()
+            center_freq.sort()
             edge_freq = [freq_min] + center_freq + [freq_max]
             num_bands = len(center_freq)
         
@@ -122,7 +124,7 @@ class filterbank:
         upper_edges = edge_freq[2:]
         
 
-        freqs = self.freq_spectrum['hertz']
+        freqs = self.freq_spectrum[freq_units]
         melmat = zeros((num_bands, len(freqs)))
 
         for iband, (center, lower, upper) in enumerate(zip(
@@ -138,10 +140,17 @@ class filterbank:
                 (upper - freqs[right_slope]) / (upper - center)
             )
         self.fb_matrix = melmat 
+
+        # (list of edges only relevant for triangular filterbank)
         self.edge_freq = np.array(edge_freq)
         self.upper_edges = upper_edges
-        self.center_freq = center_freq
         self.lower_edges = lower_edges
+
+        # update dictionary of center frequencies
+        self.center_freq[freq_units] = center_freq
+        cnt_f_idx = np.where(np.isin(self.freq_spectrum[freq_units],center_freq))
+        for f_units in self.freq_spectrum.keys().remove(freq_units):
+            self.center_freq[f_units] = self.freq_spectrum[f_units][cnt_f_idx]
 
     def build_DTSM_fb(self,
                       windows = []):
@@ -159,8 +168,14 @@ class filterbank:
             fb_matrix[i] = FR
             center_freq.append(self.freq_spectrum['hertz'][np.argmax(FR)])
         self.fb_matrix = fb_matrix
-        self.center_freq = center_freq
+        
         self.windows = windows
+
+        # update dictionary of center frequencies
+        self.center_freq['hertz'] = center_freq
+        cnt_f_idx = np.where(np.isin(self.freq_spectrum['hertz'],center_freq))
+        for f_units in self.freq_spectrum.keys().remove('hertz'):
+            self.center_freq[f_units] = self.freq_spectrum[f_units][cnt_f_idx]
         
 
     def add_DC_HF_filters(self,
