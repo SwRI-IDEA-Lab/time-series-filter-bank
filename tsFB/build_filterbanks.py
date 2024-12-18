@@ -26,7 +26,7 @@ def moving_avg_freq_response(f,
     # deal with zero/zero
     zidx = np.where(denominator==0.0)[0]
     denominator[zidx] = numerator[zidx]= 1
-    
+
     return abs(numerator/denominator)
 
 def visualize_filterbank(fb_matrix,
@@ -42,7 +42,7 @@ def visualize_filterbank(fb_matrix,
     if xlim is None:
         xlim = (np.min(fftfreq),np.max(fftfreq))
     ax.set_xlim(xlim)
-    
+
     plt.tight_layout()
     plt.show()
 
@@ -67,10 +67,11 @@ class filterbank:
                               'natural_frequency':freq_natural,
                               'hertz':freq_hz
                               }
-        
+
         # placeholders
         self.fb_matrix = None
-        self.center_freq = {}
+        self.edge_freq = None
+        self.center_freq_idx = []
         # TODO: apply better SWE practice of using underscores for encapsulation of attributes
         self.DC = False
         self.HF = False
@@ -84,13 +85,18 @@ class filterbank:
         #     self.DC = fb_dict['DC']
         #     self.HF = fb_dict['HF']
 
+    def update_center_freq_idx(self):
+        current_lst = self.center_freq_idx
+        update_lst = np.where(np.isin(self.freq_spectrum['hertz'],self.center_freq))
+        if not np.array_equiv(current_lst,update_lst):
+            self.center_freq_idx = update_lst
+
+
     def build_triangle_fb(self, 
                           filter_freq_range = (0,5),
                           num_bands = 2,
-                          center_freq = None,
-                          freq_units='hertz'):
+                          center_freq = None):
         """Creates filterbank matrix of triangle filters.
-
         Parameters
         ----------
         filter_freq_range : tuple
@@ -119,12 +125,11 @@ class filterbank:
             center_freq.sort()
             edge_freq = [freq_min] + center_freq + [freq_max]
             num_bands = len(center_freq)
-        
+
         lower_edges = edge_freq[:-2]
         upper_edges = edge_freq[2:]
-        
 
-        freqs = self.freq_spectrum[freq_units]
+        freqs = self.freq_spectrum['hertz']
         melmat = zeros((num_bands, len(freqs)))
 
         for iband, (center, lower, upper) in enumerate(zip(
@@ -140,17 +145,12 @@ class filterbank:
                 (upper - freqs[right_slope]) / (upper - center)
             )
         self.fb_matrix = melmat 
-
-        # (list of edges only relevant for triangular filterbank)
         self.edge_freq = np.array(edge_freq)
         self.upper_edges = upper_edges
+        self.center_freq = center_freq
         self.lower_edges = lower_edges
 
-        # update dictionary of center frequencies
-        self.center_freq[freq_units] = center_freq
-        cnt_f_idx = np.where(np.isin(self.freq_spectrum[freq_units],center_freq))
-        for f_units in self.freq_spectrum.keys().remove(freq_units):
-            self.center_freq[f_units] = self.freq_spectrum[f_units][cnt_f_idx]
+        self.update_center_freq_idx()
 
     def build_DTSM_fb(self,
                       windows = []):
@@ -168,15 +168,10 @@ class filterbank:
             fb_matrix[i] = FR
             center_freq.append(self.freq_spectrum['hertz'][np.argmax(FR)])
         self.fb_matrix = fb_matrix
-        
+        self.center_freq = center_freq
+        self.update_center_freq_idx()
+        self.center_freq_idx = np.where(np.isin(self.freq_spectrum['hertz'],center_freq))
         self.windows = windows
-
-        # update dictionary of center frequencies
-        self.center_freq['hertz'] = center_freq
-        cnt_f_idx = np.where(np.isin(self.freq_spectrum['hertz'],center_freq))
-        for f_units in self.freq_spectrum.keys().remove('hertz'):
-            self.center_freq[f_units] = self.freq_spectrum[f_units][cnt_f_idx]
-        
 
     def add_DC_HF_filters(self,
                           DC = True,
@@ -207,7 +202,7 @@ class filterbank:
                 self.center_freq = np.append(self.center_freq,self.edge_freq[-1])
             if self.lower_edges[-1] != self.edge_freq[-2]:
                 self.lower_edges = np.append(self.lower_edges,self.edge_freq[-2])
-        
+        self.update_center_freq_idx()
         self.DC = DC
         self.HF = HF
 
@@ -242,7 +237,7 @@ class filterbank:
                 self.center_freq = np.append(self.center_freq,cnt_fq)
             # if self.center_freq[0] != cnt_fq:
             #     self.center_freq = np.insert(self.center_freq,0,cnt_fq)
-
+        self.update_center_freq_idx()
 
     def visualize_filterbank(self):
         """Show a plot of the built filterbank."""
@@ -254,7 +249,7 @@ class filterbank:
     def save_filterbank(self):
         """Save the filterbank transformation matrix, fftfrequencies, and frequency endpoints 
         as a dictionary to a local pickle file"""
-            
+
         filterbank_dictionary = {'fb_matrix': self.fb_matrix,
                                 'fftfreq': self.fftfreq,
                                 'edge_freq': self.edge_freq,
@@ -264,8 +259,7 @@ class filterbank:
                                 'DC': self.DC,
                                 'HF': self.HF
                                 }
-            
-       
+
         fb_prefix = f'fb'
         for edge in self.edge_freq:
             fb_prefix +=f'_{edge:.3e}'
