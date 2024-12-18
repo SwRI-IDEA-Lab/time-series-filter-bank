@@ -214,8 +214,8 @@ class compare_FB:
             last_gs+=2
             ax2 = fig.add_subplot(gs[last_gs:last_gs+2])
 
-        l_colors = {'Moving Average': 'tab:red',
-                    'Mel':'tab:green'}
+        l_colors = {'Moving Average': 'brown',
+                    'Mel':'green'}
 
         for fb_name in self.fb_analysis.keys():
             fltrbank = self.fb_analysis[fb_name]
@@ -285,7 +285,7 @@ class compare_FB:
 
         # Original series
         ax0 = fig.add_subplot(gs[0:2,0:])   
-        ax0.plot(x, y,label='original')
+        ax0.plot(x, y,color='black',label='original')
         ax0.set_ylabel('(nT)')
         ax0.set_title(orig_sig_plot_title)
         ax0.tick_params(labelbottom=False)
@@ -311,7 +311,7 @@ class compare_FB:
             
             # Plot Reconstruction
             ax1 = fig.add_subplot(gs[4:5,i])
-            ax1.plot(x,fltrbnk['reconstruction'])
+            ax1.plot(x,fltrbnk['reconstruction'],color='darkblue')
             ax1.set_title(fb_name+' Signal Reconstruction')
             ax1.set_xticks([])
             ax1.grid()
@@ -319,7 +319,7 @@ class compare_FB:
                 ax1.tick_params(labelleft=False)
         
             decomp_gs = gridspec.GridSpecFromSubplotSpec(ncols=1,nrows=self.n_filters*2, 
-                                               subplot_spec=gs[5:-1,i],
+                                               subplot_spec=gs[5:,i],
                                                hspace=0)
             for j,bank in enumerate(fltrbnk['filtered_sigs']):
                 ax2 = fig.add_subplot(decomp_gs[2*j:2*j+2])    
