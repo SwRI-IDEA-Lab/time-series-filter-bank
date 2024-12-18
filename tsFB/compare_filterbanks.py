@@ -136,6 +136,9 @@ class compare_FB:
         # other useful numbers
         self.n_filters = self.Tri_fb.fb_matrix.shape[0]
         self.freq_spec = self.Tri_fb.freq_spectrum
+        self.center_freq = {}
+        for unit in self.Tri_fb.freq_spectrum.keys():
+            self.center_freq[unit] = self.Tri_fb.freq_spectrum[unit][self.Tri_fb.center_freq_idx]
 
     def build_comparative_analysis_tools(self,
                                         abs_residual=True,
@@ -143,8 +146,10 @@ class compare_FB:
                                         res_eps=0.01):
 
         # Analysis tools
-        self.fb_analysis = {'Moving Average':{'fb_matrix':self.MA_fb.fb_matrix},
-                            'Mel':{'fb_matrix':self.Tri_fb.fb_matrix}}
+        self.fb_analysis = {'Moving Average':{'fb_object':self.MA_fb,
+                                              'fb_matrix':self.MA_fb.fb_matrix},
+                            'Mel':{'fb_object':self.Tri_fb,
+                                   'fb_matrix':self.Tri_fb.fb_matrix}}
         
         for i,fb_name in enumerate(self.fb_analysis.keys()):
             fltrbnk = self.fb_analysis[fb_name]
@@ -175,8 +180,6 @@ class compare_FB:
             fltrbnk['relative_residual'] = rel_res
             
     def analyze_reconstruction(self,
-                                data_df=None,
-                                freq_units=None,
                                 abs_residual = True,
                                 percent_rel_res =True,
                                 res_eps=0.01,
@@ -184,22 +187,12 @@ class compare_FB:
                                 orig_sig_plot_title='Original Signal',
                                 plot_direct_residual=True,
                                 plot_rel_residual=True):
-        if data_df is None:
-            data_df = self.data
-        else:
-            assert len(data_df) == self.data_len, "Length of data passed does not match length of initialized data. (Need to be same length to appropriately label frequency axis)"
-        
-        if freq_units is None:
-            fftfreq = self.freq_spec['hertz']
-        else:
-            fftfreq = self.freq_spec[freq_units]
-        
         if self.fb_analysis is None:
             self.build_comparative_analysis_tools(abs_residual=abs_residual,
                                                   percent_rel_res=percent_rel_res,
                                                   res_eps=res_eps)
-        x = data_df.index
-        y = data_df
+        x = self.data.index
+        y = self.data
 
         # Original series
         fig = plt.figure(figsize=figsize)
@@ -262,335 +255,89 @@ class compare_FB:
         plt.show()
         
 
-    def comp_decomp_v2(self,
-                        data_df=None,
-                        freq_spec:str=None,
+    def compare_decomp(self,
+                        freq_units:str=None,
                         figsize=(4,11),
                         gs_wspace = 0.1,
                         gs_hspace = 0.7,
                         orig_sig_plot_title='Original Signal',
-                        plot_reconstruction=False,
-                        plot_direct_residual = False,
-                        plot_rel_residual=False,
                         abs_residual=True,
                         percent_rel_res = True,
                         res_eps = 0.01,
                         ):
-        if data_df is None:
-            data_df = self.data
-        else:
-            assert len(data_df) == self.data_len, "Length of data passed does not match length of initialized data. (Need to be same length to appropriately label frequency axis)"
-        
-        if freq_spec is None:
+        if freq_units is None:
             fftfreq = self.freq_spec['hertz']
         else:
-            fftfreq = self.freq_spec[freq_spec]
+            fftfreq = self.freq_spec[freq_units]
 
-        x = data_df.index
-        y = data_df
+        if self.fb_analysis is None:
+            self.build_comparative_analysis_tools(abs_residual=abs_residual,
+                                                  percent_rel_res=percent_rel_res,
+                                                  res_eps=res_eps)
+
+        x = self.data.index
+        y = self.data
 
         fig = plt.figure(figsize=figsize)
-        gs = gridspec.GridSpec(ncols = 2, nrows = self.n_filters+6,
+        gs = gridspec.GridSpec(ncols = 2, nrows = self.n_filters+5,
                             figure = fig,
                             wspace=gs_wspace, hspace=gs_hspace)
 
+        # Original series
+        ax0 = fig.add_subplot(gs[0:2,0:])   
+        ax0.plot(x, y,label='original')
+        ax0.set_ylabel('(nT)')
+        ax0.set_title(orig_sig_plot_title)
+        ax0.tick_params(labelbottom=False)
+        ax0.grid(True)
         
-        
-        # Filtered Signal Decomposition
-        filterbanks = {'Moving Average Filter Bank':self.MA_fb,
-                       'Mel Filter Bank':self.Tri_fb}
-        filtered_sigs = {}
-        dir_residuals = {}
-        rel_residuals = {}
-        for i,fb_name in enumerate(filterbanks.keys()):
-            fltrbnk = filterbanks[fb_name]
-            # filtered signals
-            filtered_df = fba.get_filtered_signals(data=data_df,
-                                            fb_matrix=fltrbnk.fb_matrix,
-                                            fftfreq=fftfreq,
-                                            cadence=self.cadence)
-            filtered_sigs[fb_name] = filtered_df
-
-            # direct residuals
-            res = fba.get_reconstruction_residuals(filtered_df=filtered_df,
-                                            real_signal=y,
-                                            relative=False,
-                                            percent=False,
-                                            absolute=abs_residual)
-            dir_residuals[fb_name] = res
-            
-            # relative residuals
-            rel_res = fba.get_reconstruction_residuals(filtered_df=filtered_df,
-                                            real_signal=y,
-                                            relative=True,
-                                            percent=percent_rel_res,
-                                            absolute=abs_residual,
-                                            epsilon=res_eps)
-            
-            rel_residuals[fb_name] = rel_res
-        
-        
-        for i, fb_name in enumerate(filterbanks.keys()):
-            fltrbnk = filterbanks[fb_name]
+        for i, fb_name in enumerate(self.fb_analysis.keys()):
+            fltrbnk = self.fb_analysis[fb_name]
+            fb_obj = self.fb_analysis[fb_name]['fb_object']
             # Filterbank plot
-            xlim = (fltrbnk.center_freq[0],fltrbnk.center_freq[-1])
-            ax = fig.add_subplot(gs[0:1,i])  
-            ax.plot(fftfreq, fltrbnk.fb_matrix.T)
+            xlim = (fb_obj.center_freq[0],fb_obj.center_freq[-1])
+            ax = fig.add_subplot(gs[2:3,i])  
+            ax.plot(fftfreq, fltrbnk['fb_matrix'].T)
             ax.grid(True)
             # ax.set_ylabel('Weight')
             ax.set_xlabel('Frequency (Hz)')
             ax.set_xlim(xlim)
             ax.set_title(fb_name)
-            ax.set_xticks(fltrbnk.center_freq)
+            ax.set_xticks(fb_obj.center_freq)
             ax.tick_params(rotation=35,labelsize=8,axis='x')
             ax.ticklabel_format(style='sci',scilimits=(0,0),axis='x')
             if i==1:
                 ax.tick_params(labelleft=False)
             
+            # Plot Reconstruction
+            ax1 = fig.add_subplot(gs[4:5,i])
+            ax1.plot(x,fltrbnk['reconstruction'])
+            ax1.set_title(fb_name+' Signal Reconstruction')
+            ax1.set_xticks([])
+            ax1.grid()
+            if i ==1:
+                ax1.tick_params(labelleft=False)
         
             decomp_gs = gridspec.GridSpecFromSubplotSpec(ncols=1,nrows=self.n_filters*2, 
-                                               subplot_spec=gs[6:-1,i],
+                                               subplot_spec=gs[5:-1,i],
                                                hspace=0)
-            for j,bank in enumerate(filtered_sigs[fb_name]):
-                ax0 = fig.add_subplot(decomp_gs[2*j:2*j+2])    
-                ax0.plot(bank)
+            for j,bank in enumerate(fltrbnk['filtered_sigs']):
+                ax2 = fig.add_subplot(decomp_gs[2*j:2*j+2])    
+                ax2.plot(bank)
                 if i ==1:
-                    ax0.text(x=0,y=max(bank),s=f'center freq = {fltrbnk.center_freq[j]:.2e}',
+                    ax2.text(x=0,y=max(bank),s=f'center freq = {fb_obj.center_freq[j]:.2e}',
                             ha='right',va='top',
                             #  fontweight='bold',
                             fontsize=8,
                             bbox=dict(facecolor='white', edgecolor='black',alpha=0.7))
-                ax0.set_xticks([])
-                ax0.set_yticks([])
-                # ax0.set_ylim(min(filtered_df[j]),max(filtered_df[j])+(max(filtered_df[j])*0.5))
-
-                if j==0:
-                    ax0.set_title('Signal decomposition',fontsize=15)
-            
-            # Original series
-            gs1 = gridspec.GridSpecFromSubplotSpec(ncols = 1, nrows = 6, subplot_spec=gs[2:5,i],hspace=0)
-            ax0 = fig.add_subplot(gs1[0:2])   
-            ax0.plot(x, y,label='original')
-            if i==0:
-                ax0.set_ylabel('(nT)')
-                ax0.set_title(orig_sig_plot_title)
-            else:
-                ax0.tick_params(labelleft=False)
-            ax0.tick_params(labelbottom=False)
-            ax0.grid(True)
-
-            # Reconstruction (on top of original)
-            last_gs = 0
-            if plot_reconstruction:
-                ax0.plot(x,np.sum(filtered_sigs[fb_name],axis=0),linestyle='dotted',alpha=0.9,label='filterbank \n reconstruction')
-                if i==1:
-                    ax0.legend(loc='upper left',bbox_to_anchor=(-0.2, 1.5),fontsize=8)
-            
-            # Direct Residual
-            if plot_direct_residual:
-                last_gs+=2
-                ax1 = fig.add_subplot(gs1[last_gs:last_gs+2])
-                ax1.plot(x,dir_residuals[fb_name])
-                ax1.set_title('Direct Residual',y=1.0,pad=-14,
-                            #   fontweight='bold',
-                            fontsize=10,
-                            bbox=dict(facecolor='white', edgecolor='black',alpha=0.7))
-                if i ==0:
-                    ax1.set_ylabel('(nT)')
-                    ax1.set_ylim(min(dir_residuals[fb_name]),
-                                 max(dir_residuals[fb_name])+(max(dir_residuals[fb_name])*0.5))
-                    first_ax1 = ax1
-                else:
-                    ax1.sharey(first_ax1)
-                    ax1.tick_params(labelleft=False)
-                ax1.tick_params(labelbottom=False)
-                ax1.grid(True)
-
-            # Relative Residual
-            if plot_rel_residual:
-                last_gs+=2
-                ax2 = fig.add_subplot(gs1[last_gs:last_gs+2])
-                ax2.plot(x,rel_residuals[fb_name])
-                if i == 0:
-                    ax2.set_ylim(min(rel_residuals[fb_name]),
-                                 max(rel_residuals[fb_name])+(max(rel_residuals[fb_name])*0.5))
-                    first_ax2 = ax2
-
-                    if percent_rel_res:
-                        ax2.set_ylabel('% error')
-                else:
-                    ax2.sharey(first_ax2)
                     ax2.tick_params(labelleft=False)
-                ax2.tick_params(labelbottom=False)
-                ax2.set_title('Relative Residual',y=1.0,pad=-14,
-                            #   fontweight='bold',
-                            fontsize=10,
-                            bbox=dict(facecolor='white', edgecolor='black',alpha=0.7))
-                ax2.set_xlabel('Time')
-                ax2.grid(True)
-        plt.show()
-
-    def comp_decomp_v3(self,
-                      data_df=None,
-                        freq_spec=None,
-                        figsize=(4,11),
-                        gs_wspace = 0.2,
-                        gs_hspace = 0.5,
-                        orig_sig_plot_title='Original Signal',
-                        plot_reconstruction=False,
-                        plot_direct_residual = False,
-                        plot_rel_residual=False,
-                        abs_residual=True,
-                        percent_rel_res = True,
-                        res_eps = 0.01,
-                        ):
-        if data_df is None:
-            data_df = self.data
-        else:
-            assert len(data_df) == self.data_len, "Length of data passed does not match length of initialized data. (Need to be same length to appropriately label frequency axis)"
-        
-        if freq_spec is None:
-            fftfreq = self.freq_spec['hertz']
-        else:
-            fftfreq = self.freq_spec[freq_spec]
-
-        x = data_df.index
-        y = data_df
-
-        # Filtered Signal Decomposition
-        filterbanks = {'Moving Average':self.MA_fb,
-                       'Mel':self.Tri_fb}
-        filtered_sigs = {}
-        dir_residuals = {}
-        rel_residuals = {}
-        for i,fb_name in enumerate(filterbanks.keys()):
-            fltrbnk = filterbanks[fb_name]
-            # filtered signals
-            filtered_df = fba.get_filtered_signals(data=data_df,
-                                            fb_matrix=fltrbnk.fb_matrix,
-                                            fftfreq=fftfreq,
-                                            cadence=self.cadence)
-            filtered_sigs[fb_name] = filtered_df
-
-            # direct residuals
-            res = fba.get_reconstruction_residuals(filtered_df=filtered_df,
-                                            real_signal=y,
-                                            relative=False,
-                                            percent=False,
-                                            absolute=abs_residual)
-            dir_residuals[fb_name] = res
-            
-            # relative residuals
-            rel_res = fba.get_reconstruction_residuals(filtered_df=filtered_df,
-                                            real_signal=y,
-                                            relative=True,
-                                            percent=percent_rel_res,
-                                            absolute=abs_residual,
-                                            epsilon=res_eps)
-            
-            rel_residuals[fb_name] = rel_res
-        
-        
-        fig = plt.figure(figsize=figsize)
-        gs = gridspec.GridSpec(ncols = 2, nrows = self.n_filters+6,
-                            figure = fig,
-                            wspace=gs_wspace, hspace=gs_hspace)
-        
-        for i, fb_name in enumerate(filterbanks.keys()):
-            fltrbnk = filterbanks[fb_name]
-            # Filterbank plot
-            xlim = (fltrbnk.center_freq[0],fltrbnk.center_freq[-1])
-            ax = fig.add_subplot(gs[0:1,i])  
-            ax.plot(fftfreq, fltrbnk.fb_matrix.T)
-            ax.grid(True)
-            # ax.set_ylabel('Weight')
-            ax.set_xlabel('Frequency (Hz)')
-            ax.set_xlim(xlim)
-            ax.set_title(fb_name+' Filter Bank')
-            ax.set_xticks(fltrbnk.center_freq)
-            ax.tick_params(rotation=35,labelsize=8,axis='x')
-            ax.ticklabel_format(style='sci',scilimits=(0,0),axis='x')
-            if i==1:
-                ax.tick_params(labelleft=False)
-            
-        
-            decomp_gs = gridspec.GridSpecFromSubplotSpec(ncols=1,nrows=self.n_filters*2, 
-                                               subplot_spec=gs[6:-1,i],
-                                               hspace=0)
-            for j,bank in enumerate(filtered_sigs[fb_name]):
-                ax0 = fig.add_subplot(decomp_gs[2*j:2*j+2])    
-                ax0.plot(bank)
-                if i ==1:
-                    ax0.text(x=0,y=max(bank),s=f'center freq = {fltrbnk.center_freq[j]:.2e}',
-                            ha='right',va='top',
-                            #  fontweight='bold',
-                            fontsize=8,
-                            bbox=dict(facecolor='white', edgecolor='black',alpha=0.7))
-                ax0.set_xticks([])
-                ax0.set_yticks([])
-                # ax0.set_ylim(min(filtered_df[j]),max(filtered_df[j])+(max(filtered_df[j])*0.5))
+                ax2.set_xticks([])
+                ax2.set_yticks([])
+                # ax1.set_ylim(min(filtered_df[j]),max(filtered_df[j])+(max(filtered_df[j])*0.5))
 
                 if j==0:
-                    ax0.set_title('Signal decomposition',fontsize=15)
-            
-        # Original series
-        gs1 = gridspec.GridSpecFromSubplotSpec(ncols = 1, nrows = 6, subplot_spec=gs[2:5,0:],hspace=0)
-        ax0 = fig.add_subplot(gs1[0:2])   
-        ax0.plot(x, y,color='black',label='original')
-        ax0.set_ylabel('(nT)')
-        ax0.set_title(orig_sig_plot_title)
-        ax0.tick_params(labelbottom=False)
-        ax0.grid(True)
+                    ax2.set_title(fb_name+' Signal Decomposition',fontsize=12)
 
-        # Reconstruction (on top of original)
-        last_gs = 0
-        # Direct Residual
-        if plot_direct_residual:
-            last_gs+=2
-            ax1 = fig.add_subplot(gs1[last_gs:last_gs+2])
-        if plot_rel_residual:
-                last_gs+=2
-                ax2 = fig.add_subplot(gs1[last_gs:last_gs+2])
-
-        l_colors = {'Moving Average': 'tab:red',
-                    'Mel':'tab:green'}
-
-        for fb_name in filterbanks.keys():
-            
-            if plot_reconstruction:
-                ax0.plot(x,np.sum(filtered_sigs[fb_name],axis=0),linestyle='dotted',color=l_colors[fb_name],alpha=0.9,label=f'{fb_name} reconstruction')
-                ax0.legend(loc='upper right',bbox_to_anchor=(1.0, 1.2),fontsize=8)
-            
-            if plot_direct_residual:
-                ax1.plot(x,dir_residuals[fb_name],color=l_colors[fb_name],label=f'{fb_name}')
-                ax1.set_title('Direct Residual',y=1.0,pad=-14,
-                            #   fontweight='bold',
-                            fontsize=10,
-                            bbox=dict(facecolor='white', edgecolor='black',alpha=0.7))
-                
-                ax1.set_ylabel('(nT)')
-                # ax1.set_ylim(min(dir_residuals[fb_name]),
-                #                 max(dir_residuals[fb_name])+(max(dir_residuals[fb_name])*0.5))
-                ax1.tick_params(labelbottom=False)
-                ax1.grid(True)
-
-            # Relative Residual
-            if plot_rel_residual:
-                ax2.plot(x,rel_residuals[fb_name],color=l_colors[fb_name],label=f'{fb_name}')
-                
-                # ax2.set_ylim(min(rel_residuals[fb_name]),
-                #                 max(rel_residuals[fb_name])+(max(rel_residuals[fb_name])*0.5))
-
-                if percent_rel_res:
-                    ax2.set_ylabel('% error')
-                
-                ax2.tick_params(labelbottom=False)
-                ax2.set_title('Relative Residual',y=1.0,pad=-14,
-                            #   fontweight='bold',
-                            fontsize=10,
-                            bbox=dict(facecolor='white', edgecolor='black',alpha=0.7))
-                ax2.set_xlabel('Time')
-                ax2.grid(True)
         plt.show()
 
 if __name__ == '__main__':
@@ -647,12 +394,8 @@ if __name__ == '__main__':
                            windows=[500,1000,2000,4000,8000])
         comp_anly.analyze_reconstruction(orig_sig_plot_title=f'[{args["start_year"]}-{args['start_month']}-{args['start_day']}] Original series ({col})',
                                          figsize=(8,5.5))
-        comp_anly.comp_decomp_v2(data_df=mag_df[col],
-                                     orig_sig_plot_title=f'[{args["start_year"]}-{args['start_month']}-{args['start_day']}] Original series ({col})',
+        comp_anly.compare_decomp(orig_sig_plot_title=f'[{args["start_year"]}-{args['start_month']}-{args['start_day']}] Original series ({col})',
                                      figsize=(8.5,11),
-                                     plot_reconstruction=True,
-                                     plot_direct_residual=True,
-                                     plot_rel_residual=True,
                                      percent_rel_res=True,
                                      abs_residual=args['absolute_residual'],
                                      res_eps=args['residual_epsilon'])
