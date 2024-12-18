@@ -183,26 +183,36 @@ def get_test_data(fname_full_path=None,
 
     return mag_df
 
-def get_filtered_signals(data_df,
+def get_filtered_signals(data,
                          fb_matrix,
                          fftfreq,
-                         data_col,
                          cadence):
-    if data_col is None:
-        data_col = data_df.columns[-1]
-    filtered_df = np.zeros((fb_matrix.shape[0],data_df.shape[0]))
+    """
     
-    for i in range(fb_matrix.shape[0]):
-        # get filtered signal
-        filtered_sig = tc.preprocess_fft_filter(mag_df=data_df,
-                                                cols=data_df.columns,
-                                                cadence=cadence,
-                                                frequency_weights=fb_matrix[i,:],
-                                                frequency_spectrum=fftfreq)
-        
-        filtered_sig = np.array(filtered_sig[data_col])
-        
-        filtered_df[i] = filtered_sig
+    Parameters
+    ----------
+    data : 1d array
+        1d data array to pass through the filters
+    
+    fb_matrix : ndarray
+        Matrix of filter bank filters
+
+    fftfreq : ndarray
+        Frequency spectrum
+
+    cadence : dt.timedelta
+        Cadence of data (inverse of sampling frequency)
+    """
+    filtered_df = np.zeros((fb_matrix.shape[0],data.shape[0]))
+
+    # FFT
+    sig_fft = fft.rfft(data) # the same as doing fft for each column
+
+    for i,bank in enumerate(fb_matrix):
+        filtered = sig_fft*bank
+        f_sig = np.real(fft.irfft(filtered,data.shape[0]))
+        filtered_df[i] = f_sig
+
     return filtered_df
 
 def get_reconstruction_residuals(filtered_df,
@@ -230,25 +240,24 @@ def get_reconstruction_residuals(filtered_df,
     return residual
 
 
-def view_filter_decomposition(data_df,
-                                     fb_matrix,
-                                     fftfreq,
-                                     data_col = None,
-                                     cadence = dt.timedelta(seconds=300),
-                                     figsize=(4,11),
-                                     gs_wspace = 0.2,
-                                     gs_hspace = 0.5,
-                                     xlim = None,
-                                     center_freq = None,
-                                     filterbank_plot_title='Filter bank',
-                                     orig_sig_date='',
-                                     plot_reconstruction=False,
-                                     plot_direct_residual = False,
-                                     plot_rel_residual=False,
-                                     abs_residual=True,
-                                     percent_rel_res = True,
-                                     res_eps = 0.01,
-                                     ):
+def view_filter_decomposition(data,
+                            fb_matrix,
+                            fftfreq,
+                            cadence = dt.timedelta(seconds=300),
+                            figsize=(4,11),
+                            gs_wspace = 0.2,
+                            gs_hspace = 0.5,
+                            xlim = None,
+                            center_freq = None,
+                            filterbank_plot_title='Filter bank',
+                            orig_sig_plot_title='Original Signal',
+                            plot_reconstruction=False,
+                            plot_direct_residual = False,
+                            plot_rel_residual=False,
+                            abs_residual=True,
+                            percent_rel_res = True,
+                            res_eps = 0.01,
+                            ):
     """Plot comprehensive visualization of filterbank and its application to a set of test data.
     Plot includes the filterbank, raw test data, decomposition of filterbank preprocessed data.
     
@@ -261,10 +270,8 @@ def view_filter_decomposition(data_df,
                           figure = fig,
                           wspace=gs_wspace, hspace=gs_hspace)
     
-    if data_col is None:
-        data_col = data_df.columns[-1]
-    x = data_df.index
-    y = data_df[data_col]
+    x = data.index
+    y = data
 
     # Filterbank plot
     if xlim is None:
@@ -281,10 +288,9 @@ def view_filter_decomposition(data_df,
     ax.ticklabel_format(style='sci',scilimits=(0,0),axis='x')
     
     # Filtered Signal Decomposition
-    filtered_df = get_filtered_signals(data_df=data_df,
+    filtered_df = get_filtered_signals(data=data,
                                        fb_matrix=fb_matrix,
                                        fftfreq=fftfreq,
-                                       data_col=data_col,
                                        cadence=cadence)
     gs2 = gridspec.GridSpecFromSubplotSpec(ncols=1,nrows=fb_matrix.shape[0]*2, subplot_spec=gs[6:-1],hspace=0)
     for i,bank in enumerate(filtered_df):
@@ -308,7 +314,7 @@ def view_filter_decomposition(data_df,
     ax0 = fig.add_subplot(gs1[0:2])   
     ax0.plot(x, y,label='original')
     ax0.set_ylabel('(nT)')
-    ax0.set_title(orig_sig_date+f' Original series ({data_col})')
+    ax0.set_title(orig_sig_plot_title)
     ax0.tick_params(labelbottom=False)
     # ax0.set_xticks([])
     # ax0.set_yticks([])
@@ -430,14 +436,13 @@ if __name__ == '__main__':
     
     # Visualize application
     for col in mag_df.columns:
-        view_filter_decomposition(data_df=mag_df,
+        view_filter_decomposition(data=mag_df[col],
                                      fb_matrix=fltbnk.fb_matrix,
                                      fftfreq=fltbnk.freq_spectrum['hertz'],
-                                     data_col=col,
                                      cadence=dt.timedelta(minutes=1),
                                      xlim = (fltbnk.edge_freq[0],fltbnk.edge_freq[-1]),
                                      center_freq = fltbnk.center_freq,
-                                     orig_sig_date=f'[{args["start_year"]}-{args['start_month']}-{args['start_day']}]',
+                                     orig_sig_plot_title=f'[{args["start_year"]}-{args['start_month']}-{args['start_day']}] Original series ({col})',
                                      plot_reconstruction=True,
                                      plot_direct_residual=True,
                                      plot_rel_residual=True,

@@ -137,12 +137,11 @@ class compare_FB:
 
     def comp_decomp_v2(self,
                         data_df=None,
-                        fftfreq=None,
-                        data_col = None,
+                        freq_spec:str=None,
                         figsize=(4,11),
                         gs_wspace = 0.1,
                         gs_hspace = 0.7,
-                        orig_sig_date='',
+                        orig_sig_plot_title='Original Signal',
                         plot_reconstruction=False,
                         plot_direct_residual = False,
                         plot_rel_residual=False,
@@ -154,12 +153,14 @@ class compare_FB:
             data_df = self.data
         else:
             assert len(data_df) == self.data_len, "Length of data passed does not match length of initialized data. (Need to be same length to appropriately label frequency axis)"
-        if fftfreq is None:
+        
+        if freq_spec is None:
             fftfreq = self.freq_spec['hertz']
-        if data_col is None:
-            data_col = data_df.columns[-1]
+        else:
+            fftfreq = self.freq_spec[freq_spec]
+
         x = data_df.index
-        y = data_df[data_col]
+        y = data_df
 
         fig = plt.figure(figsize=figsize)
         gs = gridspec.GridSpec(ncols = 2, nrows = self.n_filters+6,
@@ -177,10 +178,9 @@ class compare_FB:
         for i,fb_name in enumerate(filterbanks.keys()):
             fltrbnk = filterbanks[fb_name]
             # filtered signals
-            filtered_df = fba.get_filtered_signals(data_df=data_df,
+            filtered_df = fba.get_filtered_signals(data=data_df,
                                             fb_matrix=fltrbnk.fb_matrix,
                                             fftfreq=fftfreq,
-                                            data_col=data_col,
                                             cadence=self.cadence)
             filtered_sigs[fb_name] = filtered_df
 
@@ -246,7 +246,7 @@ class compare_FB:
             ax0.plot(x, y,label='original')
             if i==0:
                 ax0.set_ylabel('(nT)')
-                ax0.set_title(orig_sig_date+f' Original series ({data_col})')
+                ax0.set_title(orig_sig_plot_title)
             else:
                 ax0.tick_params(labelleft=False)
             ax0.tick_params(labelbottom=False)
@@ -305,12 +305,11 @@ class compare_FB:
 
     def comp_decomp_v3(self,
                       data_df=None,
-                        fftfreq=None,
-                        data_col = None,
+                        freq_spec=None,
                         figsize=(4,11),
                         gs_wspace = 0.2,
                         gs_hspace = 0.5,
-                        orig_sig_date='',
+                        orig_sig_plot_title='Original Signal',
                         plot_reconstruction=False,
                         plot_direct_residual = False,
                         plot_rel_residual=False,
@@ -322,12 +321,14 @@ class compare_FB:
             data_df = self.data
         else:
             assert len(data_df) == self.data_len, "Length of data passed does not match length of initialized data. (Need to be same length to appropriately label frequency axis)"
-        if fftfreq is None:
+        
+        if freq_spec is None:
             fftfreq = self.freq_spec['hertz']
-        if data_col is None:
-            data_col = data_df.columns[-1]
+        else:
+            fftfreq = self.freq_spec[freq_spec]
+
         x = data_df.index
-        y = data_df[data_col]
+        y = data_df
 
         # Filtered Signal Decomposition
         filterbanks = {'Moving Average':self.MA_fb,
@@ -338,10 +339,9 @@ class compare_FB:
         for i,fb_name in enumerate(filterbanks.keys()):
             fltrbnk = filterbanks[fb_name]
             # filtered signals
-            filtered_df = fba.get_filtered_signals(data_df=data_df,
+            filtered_df = fba.get_filtered_signals(data=data_df,
                                             fb_matrix=fltrbnk.fb_matrix,
                                             fftfreq=fftfreq,
-                                            data_col=data_col,
                                             cadence=self.cadence)
             filtered_sigs[fb_name] = filtered_df
 
@@ -411,7 +411,7 @@ class compare_FB:
         ax0 = fig.add_subplot(gs1[0:2])   
         ax0.plot(x, y,color='black',label='original')
         ax0.set_ylabel('(nT)')
-        ax0.set_title(orig_sig_date+f' Original series ({data_col})')
+        ax0.set_title(orig_sig_plot_title)
         ax0.tick_params(labelbottom=False)
         ax0.grid(True)
 
@@ -517,9 +517,8 @@ if __name__ == '__main__':
                            cadence=dt.timedelta(seconds=60),
                            windows=[500,1000,2000,4000,8000])
     for col in mag_df.columns:
-        comp_anly.comp_decomp_v3(data_df=mag_df,
-                                     data_col=col,
-                                     orig_sig_date=f'[{args["start_year"]}-{args['start_month']}-{args['start_day']}]',
+        comp_anly.comp_decomp_v2(data_df=mag_df[col],
+                                     orig_sig_plot_title=f'[{args["start_year"]}-{args['start_month']}-{args['start_day']}] Original series ({col})',
                                      figsize=(8.5,11),
                                      plot_reconstruction=True,
                                      plot_direct_residual=True,
