@@ -114,6 +114,11 @@ parser.add_argument(
     help='frequency units to use for x-axis of frequency domain plots'
 )
 
+parser.add_argument(
+    '-res_eps',
+    default=0.01,
+    help='residual epsilon to minimize impacts of dividing by true signal values that are close to zero.'
+)
 def run_compare_exp(start_date=dt.datetime(year=2000,month=1,day=1,hour=0),
                     end_date=dt.datetime(year=2000,month=1,day=2,hour=0),
                     cadence = dt.timedelta(seconds=60),
@@ -228,4 +233,5 @@ if __name__ == '__main__':
                     windows=[500,1000,2000,4000,8000],
                     freq_units=args['freq_units'],
                     figsize=(8,11),
+                    res_eps=args['res_eps']
                     )
