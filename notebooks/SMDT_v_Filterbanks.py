@@ -150,20 +150,18 @@ plt.show()
 # # Apply filterbanks to get a collection of deconstructed signals
 
 # %%
-DTSM_filtered = fba.get_filtered_signals(data_df=mag_df,
+DTSM_filtered = fba.get_filtered_signals(data=mag_df[cols],
                                          fb_matrix=DTSM.fb_matrix,
                                          fftfreq=DTSM.freq_spectrum['hertz'],
-                                         data_col=cols,
                                          cadence=dt.timedelta(minutes=1))
-fba.view_filter_decomposition(data_df=mag_df,
+fba.view_filter_decomposition(data=mag_df[cols],
                             fb_matrix=DTSM.fb_matrix,
                             fftfreq=DTSM.freq_spectrum['hertz'],
-                            data_col=cols,
                             cadence=dt.timedelta(minutes=1),
                             xlim = (0,DTSM.center_freq[-1]),
                             center_freq = DTSM.center_freq,
                             filterbank_plot_title='Moving Average Filter Bank',
-                            orig_sig_date=f'[{year}-{month}-{day}]',
+                            orig_sig_plot_title=f'[{year}-{month}-{day}] Original Signal ({cols})',
                             plot_reconstruction=True,
                             plot_direct_residual=True,
                             plot_rel_residual=True,
@@ -172,20 +170,18 @@ fba.view_filter_decomposition(data_df=mag_df,
                             res_eps=0.05)
 
 # %%
-tri_filtered = fba.get_filtered_signals(data_df=mag_df,
+tri_filtered = fba.get_filtered_signals(data=mag_df[cols],
                                         fb_matrix=tri.fb_matrix,
                                         fftfreq=tri.freq_spectrum['hertz'],
-                                        data_col=cols,
                                         cadence=dt.timedelta(minutes=1))
-fba.view_filter_decomposition(data_df=mag_df,
+fba.view_filter_decomposition(data=mag_df[cols],
                             fb_matrix=tri.fb_matrix,
                             fftfreq=tri.freq_spectrum['hertz'],
-                            data_col=cols,
                             cadence=dt.timedelta(minutes=1),
                             xlim = (0,tri.center_freq[-1]),
                             center_freq = tri.center_freq,
                             filterbank_plot_title='Mel Filter bank',
-                            orig_sig_date=f'[{year}-{month}-{day}]',
+                            orig_sig_plot_title=f'[{year}-{month}-{day}] Original Signal ({cols})',
                             plot_reconstruction=True,
                             plot_direct_residual=True,
                             plot_rel_residual=True,
