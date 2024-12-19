@@ -8,6 +8,8 @@ import matplotlib.pyplot as plt
 from scipy import fft
 from sklearn.metrics import r2_score
 
+import argparse
+import random as rnd
 import datetime as dt
 import os,sys
 
@@ -22,313 +24,208 @@ import tsFB.data.prototyping_metrics as pm
 import tsFB.utils.time_chunking as tc
 import tsFB.build_filterbanks as bfb
 import tsFB.filterbank_analysis as fba
+import tsFB.compare_filterbanks as cfb
 
 # optional
 import warnings
 warnings.filterwarnings("ignore")
 
-# %% [markdown]
-# # Prepare test data
+# Debugger arguments
+parser = argparse.ArgumentParser()
+parser.add_argument(
+    '-input_file',
+    default=None,
+    help='direct path to file to use for test'
+)
+parser.add_argument(
+    '-start_date',
+    default=None,
+    help='Start date for interval.'
+    'If None, will use values from args `start_year`, `start_month`, and `start_day`'
+)
+parser.add_argument(
+    '-stop_date',
+    default=None,
+    help='Stop date for interval. Defaults to 2018-12-31.'
+)
+parser.add_argument(
+    '-start_year',
+    default=None,
+    help='Start year for interval.'
+    'If None, value is randomized to value between 1994 and 2023.'
+    'Defaults to None.'
+)
+parser.add_argument(
+    '-start_month',
+    default=None,
+    help='Start month for interval.'
+    'If None, value is randomized.'
+    'Defaults to None.'
+)
+parser.add_argument(
+    '-start_day',
+    default=None,
+    help='Start day for interval.'
+    'If None, value is randomized to value between 1 and 28.'
+    'Defaults to None.'
+)
+parser.add_argument(
+    '-chunk_size',
+    default=86400,
+    help=(
+        'Duration, in seconds, length of test data'
+        'Defaults to 86400 seconds (1 day).'
+    ),
+    type=int
+)
+parser.add_argument(
+    '-cadence',
+    default=60,
+    help=(
+        'Final cadence of interpolated timeseries in seconds.'
+        'Defaults to 1 second.'
+    ),
+    type=int
+)
+parser.add_argument(
+    '-absolute_residual',
+    help='Whether or not to use absolute value of residuals',
+    default=True,
+    action='store_true'
+)
+parser.add_argument(
+    '-residual_epsilon',
+    help='Epsilon in denominator of relative residual calculation (to minimize effect of dividing by near zero).',
+    default=0.01,
+    type=float
+)
 
-# %%
-# %% Get data
+def list_of_ints(arg):
+    return list(map(int, arg.split(',')))
+parser.add_argument(
+    '-windows',
+    help='List of running mean windows (in seconds).',
+    default = [500,1000,2000,4000,8000],
+    type=list_of_ints
+)
+parser.add_argument(
+    '-freq_units',
+    default=None,
+    help='frequency units to use for x-axis of frequency domain plots'
+)
 
-year = '2019'
-month = '06'
-day = '01'
-test_cdf_file_path =_MODEL_DIR+fba._OMNI_MAG_DATA_DIR+ year +'/omni_hro_1min_'+ year+month+'01_v01.cdf'
+def run_compare_exp(start_date=dt.datetime(year=2000,month=1,day=1,hour=0),
+                    end_date=dt.datetime(year=2000,month=1,day=2,hour=0),
+                    cadence = dt.timedelta(seconds=60),
+                    windows=[500,1000,2000,4000,8000],
+                    freq_units:str=None,
+                    figsize=(4,11),
+                    gs_wspace = 0.1,
+                    gs_hspace = 0.7,
+                    abs_residual=True,
+                    percent_rel_res = True,
+                    res_eps = 0.01
+                    ):
+    # Get data
+    year_str = str(start_date.year)
+    month_str = format(start_date.month,'02')
+    day_str = format(start_date.day,'02')
+    
+    test_cdf_file_path =_SRC_DIR+fba._OMNI_MAG_DATA_DIR+ year_str +'/omni_hro_1min_'+ year_str+month_str+'01_v01.cdf'
 
-mag_df = fba.get_test_data(fname_full_path=test_cdf_file_path,
-                           start_date=dt.datetime(year=int(year),month=int(month),day=int(day),hour=0),
-                           end_date=dt.datetime(year=int(year),month=int(month),day=int(day)+1,hour=0))
-cols = 'BX_GSE'
-mag_df=mag_df[[cols]]
-mag_df
-# mag_df = mag_df-mag_df.mean()  # Include this for fair comparison of DC and/or HF true or false (if both are true, original signal can be reconstructed regardless)
+    mag_df = fba.get_test_data(fname_full_path=test_cdf_file_path,
+                            start_date=start_date,
+                            end_date=end_date)
+    
+    
+    for i,col in enumerate(mag_df.columns):
+        comp_fb = cfb.compare_FB(data=mag_df[col],
+                                cadence=cadence,
+                                windows=windows)
+        
+        comp_fb.build_comparative_analysis_tools(abs_residual=True,
+                                                percent_rel_res=True,
+                                                res_eps=0.01)
 
-# %% Prepare FT of test data for Fourier applications
+        if i == 0:
+            # plot all in single plot
+            plt.figure(figsize=(10,5))
+            for m_bank in comp_fb.MA_fb.fb_matrix:
+                plt.plot(comp_fb.MA_fb.freq_spectrum['hertz'],m_bank,linewidth=2)
+            for t_bank in comp_fb.Tri_fb.fb_matrix:
+                plt.plot(comp_fb.Tri_fb.freq_spectrum['hertz'],t_bank,linestyle='dashdot')
 
-cadence = dt.timedelta(seconds=60)
+            plt.xlim(0.0,comp_fb.Tri_fb.center_freq[-1])
+            plt.xlabel('Frequency (Hz)')
+            plt.grid()
+            plt.title('Both filterbank types in single plot')
+            plt.show()
 
-mag_df.sort_index(inplace=True)
-mag_df.interpolate(method='index', kind='linear',limit_direction='both',inplace=True)
-
-# %% [markdown]
-# # Summary of theoretical formulas
-# 
-# 
-# ## General moving average filter
-# **(Formula from [Ch. 15 of *Digital Signal Processing Textbook*](https://www.dspguide.com/CH15.PDF))**
-# 
-# Frequency response of an $M$ point moving average filter. 
-# The frequency, $f$, runs between $0$ and $0.5$. For $f = 0$, use $H[f] = 1$
-# 
-# $$H[f] = \frac{\sin(\pi f M)}{M\sin(\pi f)}$$
-# 
-# ## Detrending ($DT$)
-# Frequency response of detrending with window $W_d$,
-# 
-# \begin{align*}
-# 
-# \widetilde{DT}[f] &= 1 - H_d[f] \\
-# 
-# &= 1 - \frac{\sin (\pi f W_d)}{W_d \sin (\pi f)}
-# 
-# \end{align*}
-# 
-# ## Smoothing ($SM$)
-# Frequency response of smoothing with window $W_s$,
-# 
-# \begin{align*}
-# 
-# \widetilde{SM}[f] &= H_s[f] \\
-# 
-# &= \frac{\sin (\pi f W_s)}{W_s \sin (\pi f)}
-# 
-# \end{align*}
-# 
-# ## *Both* detrending and smoothing 
-# (just product of the above two)
-# 
-# \begin{align*}
-# 
-# \widetilde{DTSM}[f] &=  \widetilde{DT}[f] \cdot \widetilde{SM}[f] \\
-# 
-# &= (1-H_d[f]) \cdot (H_s[f]) \\
-# 
-# &= \left(1 - \frac{\sin (\pi f W_d)}{W_d \sin (\pi f)}\right) \cdot \left(\frac{\sin (\pi f W_s)}{W_s \sin (\pi f)}\right) 
-# 
-# \end{align*}
-
-# %% [markdown]
-# # Create Frequency Domain Filterbanks
-
-# %% Moving average filterbanks
-DTSM = bfb.filterbank(data_len=len(mag_df),
-                    cadence=dt.timedelta(seconds=60))
-DTSM.build_DTSM_fb(windows=[500,1000,2000,4000,8000])
-
-DTSM.add_mvgavg_DC_HF()
-bfb.visualize_filterbank(fb_matrix=DTSM.fb_matrix,
-                        fftfreq=DTSM.freq_spectrum['hertz'],
-                        xlim=(0,DTSM.center_freq[-1]))
-
-# %% triangle filterbanks
-tri = bfb.filterbank(data_len=len(mag_df),
-                    cadence=dt.timedelta(seconds=60))
-tri.build_triangle_fb((0.0,np.sort(DTSM.center_freq)[-1]),
-                      center_freq=np.sort(DTSM.center_freq[1:-1]))
-tri.add_DC_HF_filters()
-bfb.visualize_filterbank(fb_matrix=tri.fb_matrix,
-                        fftfreq=tri.freq_spectrum['hertz'],
-                        xlim=(0.0,tri.center_freq[-1]))
-
-# %% plot all in single plot
-plt.figure(figsize=(10,5))
-for m_bank in DTSM.fb_matrix:
-    plt.plot(DTSM.freq_spectrum['hertz'],m_bank,linewidth=2)
-for t_bank in tri.fb_matrix:
-    plt.plot(tri.freq_spectrum['hertz'],t_bank,linestyle='dashdot')
-
-plt.xlim(0.0,tri.center_freq[-1])
-plt.xlabel('Frequency (Hz)')
-plt.grid()
-plt.title('Both filterbank types in single plot')
-plt.show()
-
-# %% Sum of filterbank amplitudes
-plt.plot(DTSM.freq_spectrum['hertz'],np.sum(DTSM.fb_matrix,axis=0),label=f'$\sum$ Moving Avg. filters ({DTSM.fb_matrix.shape[0]} filters)')
-plt.plot(tri.freq_spectrum['hertz'],np.sum(tri.fb_matrix,axis=0),label='$\sum$ Mel filters')
-plt.xlabel('Frequency (hz)')
-plt.ylabel('Amplitude')
-plt.title('Sum of filter amplitudes across all frequencies')
-plt.legend()
-plt.show()
-
-
-# %% [markdown]
-# # Apply filterbanks to get a collection of deconstructed signals
-
-# %%
-DTSM_filtered = fba.get_filtered_signals(data_df=mag_df,
-                                         fb_matrix=DTSM.fb_matrix,
-                                         fftfreq=DTSM.freq_spectrum['hertz'],
-                                         data_col=cols,
-                                         cadence=dt.timedelta(minutes=1))
-fba.view_filter_decomposition(data_df=mag_df,
-                            fb_matrix=DTSM.fb_matrix,
-                            fftfreq=DTSM.freq_spectrum['hertz'],
-                            data_col=cols,
-                            cadence=dt.timedelta(minutes=1),
-                            xlim = (0,DTSM.center_freq[-1]),
-                            center_freq = DTSM.center_freq,
-                            filterbank_plot_title='Moving Average Filter Bank',
-                            orig_sig_date=f'[{year}-{month}-{day}]',
-                            plot_reconstruction=True,
-                            plot_direct_residual=True,
-                            plot_rel_residual=True,
-                            percent_rel_res=True,
-                            abs_residual=True,
-                            res_eps=0.05)
-
-# %%
-tri_filtered = fba.get_filtered_signals(data_df=mag_df,
-                                        fb_matrix=tri.fb_matrix,
-                                        fftfreq=tri.freq_spectrum['hertz'],
-                                        data_col=cols,
-                                        cadence=dt.timedelta(minutes=1))
-fba.view_filter_decomposition(data_df=mag_df,
-                            fb_matrix=tri.fb_matrix,
-                            fftfreq=tri.freq_spectrum['hertz'],
-                            data_col=cols,
-                            cadence=dt.timedelta(minutes=1),
-                            xlim = (0,tri.center_freq[-1]),
-                            center_freq = tri.center_freq,
-                            filterbank_plot_title='Mel Filter bank',
-                            orig_sig_date=f'[{year}-{month}-{day}]',
-                            plot_reconstruction=True,
-                            plot_direct_residual=True,
-                            plot_rel_residual=True,
-                            percent_rel_res=True,
-                            abs_residual=True,
-                            res_eps=0.05)
-
-# %% [markdown]
-# ## "bank" of filtered signals from applying smoothing & detrending in time domain
-# Manually create collection of filtered signals from doing convolution in time domain with the same windows.
-# %% "filterbank" of Smoothing & detrending via convolution
-convolution_filtered = np.zeros(DTSM_filtered.shape)
-DTSM.windows.sort(reverse=True)
-for i,w in enumerate(DTSM.windows[:-1]):
-    filtered = tc.preprocess_smooth_detrend(mag_df=mag_df,
-                                            cols=cols,
-                                            detrend_window=dt.timedelta(seconds=w),
-                                            smooth_window=dt.timedelta(seconds=DTSM.windows[i+1]))
-    convolution_filtered[i+1] = np.array(filtered).ravel()
-# DC
-if DTSM.DC:
-    DC_filtered = tc.preprocess_smooth_detrend(mag_df=mag_df,
-                                            cols=cols,
-                                            detrend_window=dt.timedelta(seconds=0),
-                                            smooth_window=dt.timedelta(seconds=max(DTSM.windows)))
-    convolution_filtered[0] = np.array(DC_filtered).ravel()
-# HF
-if DTSM.HF:
-    HF_filtered = tc.preprocess_smooth_detrend(mag_df=mag_df,
-                                            cols=cols,
-                                            detrend_window=dt.timedelta(seconds=min(DTSM.windows)),
-                                            smooth_window=dt.timedelta(seconds=0))
-    convolution_filtered[-1] = np.array(HF_filtered).ravel()
+            # Sum of filterbank amplitudes
+            plt.plot(comp_fb.MA_fb.freq_spectrum['hertz'],np.sum(comp_fb.MA_fb.fb_matrix,axis=0),label=f'$\sum$ Moving Avg. filters ({comp_fb.MA_fb.fb_matrix.shape[0]} filters)')
+            plt.plot(comp_fb.Tri_fb.freq_spectrum['hertz'],np.sum(comp_fb.Tri_fb.fb_matrix,axis=0),label='$\sum$ Mel filters')
+            plt.xlabel('Frequency (hz)')
+            plt.ylabel('Amplitude')
+            plt.title('Sum of filter amplitudes across all frequencies')
+            plt.legend()
+            plt.show()
 
 
-# %% [markdown]
-# # Compare reconstructed signals (by summing all filtered signals)
-# Sum up all of the filtered signals that came out of each filterbank, and compare how they did
+        # Signal Decomposition
+        comp_fb.compare_decomp(freq_units=freq_units,
+                            figsize=figsize,
+                            gs_wspace=gs_wspace,
+                            gs_hspace=gs_hspace,
+                            orig_sig_plot_title=f'[{year_str}-{month_str}-{day_str}] Original Signal ({col})'
+                            )
 
-# %% save sum of signals
-sum_DTSM_filtered = np.sum(DTSM_filtered,axis=0)
-sum_tri_filtered = np.sum(tri_filtered,axis=0)
-sum_conv_filtered = np.sum(convolution_filtered,axis=0)
-
-# %% [markdown]
-# ## Compare signals directly
-
-# %% calculate r-squared scores
-# TODO: these scores may not be that useful, so can probably get rid of them
-real = np.array(mag_df).ravel()
-DTSM_r2 = r2_score(real,sum_DTSM_filtered)
-tri_r2 = r2_score(real,sum_tri_filtered)
-conv_r2 = r2_score(real,sum_conv_filtered)
-
-# %% Plot Original vs. Convolution vs. Triangles
-plt.figure(figsize=(10,5))
-plt.plot(mag_df.index,real,color='black',label='original data')
-# plt.plot(mag_df.index,sum_conv_filtered,linestyle='dashed',label=f'Convolution reconstruction ($R^2$: {conv_r2:.2f})')
-plt.plot(mag_df.index,sum_DTSM_filtered,color='tab:orange',alpha=0.7,label=f'DTSM reconstruction ($R^2$:{DTSM_r2:.2e})')
-plt.plot(mag_df.index,sum_tri_filtered,color='tab:green',linestyle='dotted',alpha=0.5,label=f'triangle reconstruction ($R^2$: {tri_r2:.2f})')
-plt.title('Compare reconstructed signals directly with original')
-plt.xlabel('Date & Time (MM-DD-HH)')
-plt.ylabel('Magnetic field (nT)')
-plt.legend()
-plt.show()
-
-# %% Plot Original vs. Convolution vs. Triangles
-# sums = {'DTSM':sum_DTSM_filtered,
-#         'Convolution': sum_conv_filtered,
-#         'Triangles':sum_tri_filtered}
-# for i,selection in enumerate(['DTSM','Convolution','Triangles']):
-#     plt.figure(figsize=(10,5))
-#     plt.plot(mag_df.index,real,label='original data')
-#     plt.plot(mag_df.index,sums[selection],linestyle='dashed',label=f'$\sum$ {selection}')
-#     plt.title('Compare reconstructed signals directly with original')
-#     plt.xlabel('Date & Time (MM-DD-HH)')
-#     plt.ylabel('Magnetic field (nT)')
-#     plt.legend()
-#     plt.show()
+        # Signal reconstruction (residuals, etc.)
+        comp_fb.analyze_reconstruction(abs_residual=abs_residual,
+                                    percent_rel_res=percent_rel_res,
+                                    res_eps=res_eps,
+                                    orig_sig_plot_title=f'[{year_str}-{month_str}-{day_str}] Original Signal ({col})',
+                                    plot_direct_residual=True,
+                                    plot_rel_residual=True,
+                                    figsize=(8,5.5))
 
 
-# %% residuals
-DTSM_residual = fba.get_reconstruction_residuals(filtered_df=DTSM_filtered,
-                                                 real_signal=real,
-                                                 relative=False,
-                                                 absolute=False)
-tri_residual = fba.get_reconstruction_residuals(filtered_df=tri_filtered,
-                                                real_signal=real,
-                                                relative=False,
-                                                absolute=False)
-conv_residual = fba.get_reconstruction_residuals(filtered_df=convolution_filtered,
-                                                 real_signal=real,
-                                                 relative=False,
-                                                 absolute=False)
+if __name__ == '__main__':
+    # args--------------------------------------------------
+    args = vars(parser.parse_args())
+    if args['start_date'] is None:
+        if args['start_year'] is None:
+            args['start_year'] = rnd.randint(1981,2023)
+        if args['start_month'] is None:
+            args['start_month'] = format(rnd.randint(1,12),'02')
+        if args['start_day'] is None:
+            args['start_day'] = format(rnd.randint(1,28),'02')
+        args['start_date'] = dt.datetime.strptime(
+            f'{args['start_year']}-{args['start_month']}-{args['start_day']}',
+            '%Y-%m-%d'
+        )
+    else:
+        args['start_date'] = dt.datetime.strptime(
+        args['start_date'],
+        '%Y-%m-%d'
+    )
+        
+    args['chunk_size'] = dt.timedelta(seconds=args['chunk_size'])
 
-residuals = {'DTSM':DTSM_residual,
-            'Triangles':tri_residual,
-            'Convolution':conv_residual}
+    if args['stop_date'] is None:
+        args['stop_date'] = args['start_date'] + args['chunk_size']
+    else:
+        args['stop_date'] = dt.datetime.strptime(
+            args['stop_date'],
+            '%Y-%m-%d'
+        )
 
-# %% [markdown]
-# ## Residuals of reconstructed signals compared with original
-# %% Plot residuals: all in single plot
-plt.figure(figsize=(10,5))
-for i,selection in enumerate(['DTSM','Convolution','Triangles']):
-    plt.plot(mag_df.index,residuals[selection],
-             label=f'{selection} (total: {sum(abs(residuals[selection])):.2e}; Average: {abs(residuals[selection].mean()):.2e})')
-    plt.legend()
-plt.xlabel('Index')
-plt.ylabel('Residual (nT)')
-plt.title('Direct residual of reconstructed signals compared with original data signal')
-plt.grid()
-plt.show()
+    args['cadence'] = dt.timedelta(seconds=args['cadence'])
+    # -------------------------------------------------------
 
-
-# %% relative residuals
-DTSM_rel_residual = fba.get_reconstruction_residuals(filtered_df=DTSM_filtered,
-                                                     real_signal=real,
-                                                     relative=True,
-                                                     percent=True,
-                                                     absolute=False)
-tri_rel_residual = fba.get_reconstruction_residuals(filtered_df=tri_filtered,
-                                                    real_signal=real,
-                                                    relative=True,
-                                                    percent=True,
-                                                    absolute=False)
-conv_rel_residual = fba.get_reconstruction_residuals(filtered_df=convolution_filtered,
-                                                     real_signal=real,
-                                                     relative=True,
-                                                     percent=True,
-                                                     absolute=False)
-
-rel_residuals = {'DTSM':DTSM_rel_residual,
-            'Triangles':tri_rel_residual,
-            'Convolution':conv_rel_residual}
-
-# %% Plot relative residuals
-plt.figure(figsize=(10,5))
-for i,selection in enumerate(['DTSM','Convolution','Triangles']):
-    plt.plot(mag_df.index,rel_residuals[selection],
-             label=f'{selection}')
-    plt.legend()
-plt.xlabel('Index')
-plt.ylabel('Relative Residual (%)')
-plt.title('Relative Residual of reconstructed signals compared with original data signal')
-plt.grid()
-plt.show()
+    run_compare_exp(start_date=args['start_date'],
+                    end_date=args['stop_date'],
+                    cadence=args['cadence'],
+                    windows=[500,1000,2000,4000,8000],
+                    freq_units=args['freq_units'],
+                    figsize=(8,11),
+                    )
