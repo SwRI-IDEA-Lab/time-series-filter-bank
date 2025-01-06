@@ -99,12 +99,11 @@ for i in range(50):
     DTSM.build_DTSM_fb(windows=winds)
     DTSM.add_mvgavg_DC_HF()
 
-    DTSM_filtered = fba.get_filtered_signals(data_df=mag_df,
-                                                            fb_matrix=DTSM.fb_matrix,
-                                                            fftfreq=DTSM.freq_spectrum['hertz'],
-                                                            data_col=cols,
-                                                            cadence=dt.timedelta(minutes=1),
-                                                            )
+    DTSM_filtered = fba.get_filtered_signals(data=mag_df[cols],
+                                            fb_matrix=DTSM.fb_matrix,
+                                            fftfreq=DTSM.freq_spectrum['hertz'],
+                                            cadence=dt.timedelta(minutes=1),
+                                            )
     sum_DTSM_filtered = np.sum(DTSM_filtered,axis=0)
 
     lens2.append(DTSM.fb_matrix.shape[0])
