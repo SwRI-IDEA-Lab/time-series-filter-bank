@@ -186,7 +186,8 @@ class compare_FB:
                                 figsize=(8,11),
                                 orig_sig_plot_title='Original Signal',
                                 plot_direct_residual=True,
-                                plot_rel_residual=True):
+                                plot_rel_residual=True,
+                                rel_res_ylim=None):
         if self.fb_analysis is None:
             self.build_comparative_analysis_tools(abs_residual=abs_residual,
                                                   percent_rel_res=percent_rel_res,
@@ -213,6 +214,10 @@ class compare_FB:
         if plot_rel_residual:
             last_gs+=2
             ax2 = fig.add_subplot(gs[last_gs:last_gs+2])
+            if rel_res_ylim is not None:
+                ymin = rel_res_ylim[0]
+                ymax = rel_res_ylim[1]
+                ax2.set_ylim(ymin=ymin,ymax=ymax)
 
         l_colors = {'Moving Average': 'brown',
                     'Mel':'green'}
@@ -259,7 +264,7 @@ class compare_FB:
                         freq_units:str=None,
                         figsize=(4,11),
                         gs_wspace = 0.1,
-                        gs_hspace = 0.7,
+                        gs_hspace = 0.5,
                         orig_sig_plot_title='Original Signal',
                         abs_residual=True,
                         percent_rel_res = True,
@@ -313,8 +318,9 @@ class compare_FB:
             ax1 = fig.add_subplot(gs[4:5,i])
             ax1.plot(x,fltrbnk['reconstruction'],color='darkblue')
             ax1.set_title(fb_name+' Signal Reconstruction')
-            ax1.set_xticks([])
+            # ax1.set_xticks([])
             ax1.grid()
+            ax1.tick_params(labelbottom=False)
             if i ==1:
                 ax1.tick_params(labelleft=False)
         
@@ -331,10 +337,11 @@ class compare_FB:
                             fontsize=8,
                             bbox=dict(facecolor='white', edgecolor='black',alpha=0.7))
                     ax2.tick_params(labelleft=False)
-                ax2.set_xticks([])
+                # ax2.set_xticks([])
                 ax2.set_yticks([])
                 # ax1.set_ylim(min(filtered_df[j]),max(filtered_df[j])+(max(filtered_df[j])*0.5))
-
+                ax2.tick_params(labelbottom=False)
+                ax2.grid()
                 if j==0:
                     ax2.set_title(fb_name+' Signal Decomposition',fontsize=12)
 
@@ -393,7 +400,8 @@ if __name__ == '__main__':
                            cadence=dt.timedelta(seconds=60),
                            windows=[500,1000,2000,4000,8000])
         comp_anly.analyze_reconstruction(orig_sig_plot_title=f'[{args["start_year"]}-{args['start_month']}-{args['start_day']}] Original series ({col})',
-                                         figsize=(8,5.5))
+                                         figsize=(8,5.5),
+                                         rel_res_ylim=(-5,105))
         comp_anly.compare_decomp(orig_sig_plot_title=f'[{args["start_year"]}-{args['start_month']}-{args['start_day']}] Original series ({col})',
                                      figsize=(8.5,11),
                                      percent_rel_res=True,
