@@ -288,7 +288,7 @@ class compare_FB:
                             figure = fig,
                             wspace=gs_wspace, hspace=gs_hspace)
 
-        # Original series
+        # Original series=========================================================
         ax0 = fig.add_subplot(gs[0:2,0:])   
         ax0.plot(x, y,color='black',label='original')
         ax0.set_ylabel('(nT)')
@@ -299,12 +299,11 @@ class compare_FB:
         for i, fb_name in enumerate(self.fb_analysis.keys()):
             fltrbnk = self.fb_analysis[fb_name]
             fb_obj = self.fb_analysis[fb_name]['fb_object']
-            # Filterbank plot
+            # Filterbank plot=====================================================
             xlim = (fb_obj.center_freq[0],fb_obj.center_freq[-1])
             ax = fig.add_subplot(gs[2:3,i])  
             ax.plot(fftfreq, fltrbnk['fb_matrix'].T)
             ax.grid(True)
-            # ax.set_ylabel('Weight')
             ax.set_xlabel('Frequency (Hz)')
             ax.set_xlim(xlim)
             ax.set_title(fb_name)
@@ -314,47 +313,35 @@ class compare_FB:
             if i==1:
                 ax.tick_params(labelleft=False)
             
-            # # Plot Reconstruction
-            # ax1 = fig.add_subplot(gs[4:5,i])
-            # ax1.plot(x,fltrbnk['reconstruction'],color='darkblue')
-            # ax1.set_title(fb_name+' Signal Reconstruction')
-            # # ax1.set_xticks([])
-            # ax1.grid()
-            # ax1.tick_params(labelbottom=False)
-            # if i ==1:
-            #     ax1.tick_params(labelleft=False)
-        
+
+            # Reconstruction & Decomposition======================================
             decomp_gs = gridspec.GridSpecFromSubplotSpec(ncols=1,nrows=self.n_filters*2+3, 
                                                subplot_spec=gs[4:,i],
                                                hspace=0)
-            # Plot Reconstruction
+            # Plot Reconstruction-------------------------------------------------
             ax1 = fig.add_subplot(decomp_gs[0:2],sharex=ax0,sharey=ax0)
             ax1.plot(x,fltrbnk['reconstruction'],color='darkblue')
             ax1.set_title(fb_name+' Signal Reconstruction')
-            # ax1.set_xticks([])
             ax1.grid()
             ax1.tick_params(labelbottom=False)
             if i ==1:
                 ax1.tick_params(labelleft=False)
 
+            # Plot Decomposition--------------------------------------------------
             for j,bank in enumerate(fltrbnk['filtered_sigs']):
                 ax2 = fig.add_subplot(decomp_gs[2*j+3:2*j+5],sharex=ax1)    
                 ax2.plot(x,bank)
                 if i ==1:
                     ax2.text(x=min(x),y=max(bank),s=f'center freq = {fb_obj.center_freq[j]:.2e}',
                             ha='right',va='top',
-                            #  fontweight='bold',
                             fontsize=8,
                             bbox=dict(facecolor='white', edgecolor='black',alpha=0.7))
                     ax2.tick_params(labelleft=False)
-                # ax2.set_xticks([])
                 ax2.set_yticks([])
-                # ax1.set_ylim(min(filtered_df[j]),max(filtered_df[j])+(max(filtered_df[j])*0.5))
                 ax2.tick_params(labelbottom=False)
                 ax2.grid()
                 if j==0:
                     ax2.set_title(fb_name+' Signal Decomposition',fontsize=12)
-
         plt.show()
 
 if __name__ == '__main__':
