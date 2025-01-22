@@ -118,13 +118,13 @@ class compare_FB:
         self.cadence = cadence
         self.windows = windows
 
-        # Moving Average Filterbank
+        # Moving Average Filterbank=====================================
         self.MA_fb = bfb.filterbank(data_len=self.data_len,
                                     cadence=self.cadence)
         self.MA_fb.build_DTSM_fb(windows=self.windows)
         self.MA_fb.add_mvgavg_DC_HF()
         
-        # Mel (Triangle) Filterbank
+        # Mel (Triangle) Filterbank=====================================
         self.Tri_fb = bfb.filterbank(data_len=self.data_len,
                                      cadence=self.cadence)
         self.Tri_fb.build_triangle_fb((0.0,np.sort(self.MA_fb.center_freq)[-1]),
@@ -133,7 +133,7 @@ class compare_FB:
 
         self.fb_analysis = None
 
-        # other useful numbers
+        # other useful numbers==========================================
         self.n_filters = self.Tri_fb.fb_matrix.shape[0]
         self.freq_spec = self.Tri_fb.freq_spectrum
         self.center_freq = {}
@@ -145,7 +145,7 @@ class compare_FB:
                                         percent_rel_res=True,
                                         res_eps=0.01):
 
-        # Analysis tools
+        # Analysis tools================================================
         self.fb_analysis = {'Moving Average':{'fb_object':self.MA_fb,
                                               'fb_matrix':self.MA_fb.fb_matrix},
                             'Mel':{'fb_object':self.Tri_fb,
@@ -153,7 +153,7 @@ class compare_FB:
         
         for i,fb_name in enumerate(self.fb_analysis.keys()):
             fltrbnk = self.fb_analysis[fb_name]
-            # filtered signals
+            # filtered signals------------------------------------------
             filtered_df = fba.get_filtered_signals(data=self.data,
                                             fb_matrix=fltrbnk['fb_matrix'],
                                             fftfreq=self.freq_spec['hertz'],
@@ -161,7 +161,7 @@ class compare_FB:
             fltrbnk['filtered_sigs'] = filtered_df
 
             fltrbnk['reconstruction'] = np.sum(filtered_df,axis=0)
-            # direct residuals
+            # direct residuals------------------------------------------
             res = fba.get_reconstruction_residuals(filtered_df=filtered_df,
                                             real_signal=self.data,
                                             relative=False,
@@ -169,7 +169,7 @@ class compare_FB:
                                             absolute=abs_residual)
             fltrbnk['direct_residual'] = res
             
-            # relative residuals
+            # relative residuals----------------------------------------
             rel_res = fba.get_reconstruction_residuals(filtered_df=filtered_df,
                                             real_signal=self.data,
                                             relative=True,
@@ -195,7 +195,7 @@ class compare_FB:
         x = self.data.index
         y = self.data
 
-        # Original series
+        # Original series===============================================
         fig = plt.figure(figsize=figsize)
         gs = gridspec.GridSpec(ncols = 1, nrows = 6,hspace=0)
         ax0 = fig.add_subplot(gs[0:2])   
@@ -205,9 +205,9 @@ class compare_FB:
         ax0.tick_params(labelbottom=False)
         ax0.grid(True)
 
-        # Reconstruction (on top of original)
+        # Configure gridspec and other useful===========================
         last_gs = 0
-        # Direct Residual
+
         if plot_direct_residual:
             last_gs+=2
             ax1 = fig.add_subplot(gs[last_gs:last_gs+2])
@@ -222,37 +222,33 @@ class compare_FB:
         l_colors = {'Moving Average': 'brown',
                     'Mel':'green'}
 
+        # Plots==================================================================================
         for fb_name in self.fb_analysis.keys():
+            # Reconstruction plotted over original----------------------------------------------
             fltrbank = self.fb_analysis[fb_name]
             ax0.plot(x,fltrbank['reconstruction'],linestyle='dotted',color=l_colors[fb_name],alpha=0.9,label=f'{fb_name} reconstruction')
-            ax0.legend()#loc='upper right',bbox_to_anchor=(1.0, 1.2),fontsize=8)
+            ax0.legend()
             
+            # Direct residual--------------------------------------------------------------------
             if plot_direct_residual:
                 ax1.plot(x,fltrbank['direct_residual'],color=l_colors[fb_name],label=f'{fb_name}')
                 ax1.set_title('Direct Residual',y=1.0,pad=-14,
-                            #   fontweight='bold',
                             fontsize=10,
                             bbox=dict(facecolor='white', edgecolor='black',alpha=0.7))
                 
                 ax1.set_ylabel('(nT)')
-                # ax1.set_ylim(min(dir_residuals[fb_name]),
-                #                 max(dir_residuals[fb_name])+(max(dir_residuals[fb_name])*0.5))
                 ax1.tick_params(labelbottom=False)
                 ax1.grid(True)
 
-            # Relative Residual
+            # Relative Residual-------------------------------------------------------------------
             if plot_rel_residual:
                 ax2.plot(x,fltrbank['relative_residual'],color=l_colors[fb_name],label=f'{fb_name}')
-                
-                # ax2.set_ylim(min(rel_residuals[fb_name]),
-                #                 max(rel_residuals[fb_name])+(max(rel_residuals[fb_name])*0.5))
-
+            
                 if percent_rel_res:
                     ax2.set_ylabel('% error')
                 
                 ax2.tick_params(labelbottom=False)
                 ax2.set_title('Relative Residual',y=1.0,pad=-14,
-                            #   fontweight='bold',
                             fontsize=10,
                             bbox=dict(facecolor='white', edgecolor='black',alpha=0.7))
                 ax2.set_xlabel('Time')
@@ -345,7 +341,7 @@ class compare_FB:
         plt.show()
 
 if __name__ == '__main__':
-    # args--------------------------------------------------
+    # args==============================================================
     args = vars(parser.parse_args())
     if args['start_date'] is None:
         if args['start_year'] is None:
@@ -375,9 +371,9 @@ if __name__ == '__main__':
         )
 
     args['cadence'] = dt.timedelta(seconds=args['cadence'])
-    # -------------------------------------------------------
+    
 
-    # Test data
+    # Test data=========================================================
     if args['input_file'] is None:
         year = str(args['start_year'])
         month = str(args['start_month'])
@@ -390,15 +386,17 @@ if __name__ == '__main__':
                            end_date=args['stop_date'])
     # mag_df = mag_df-mag_df.mean()
     
-    # Visualize application
-    
+    # Visualize application============================================================
     for col in mag_df.columns:
+        # instantiate------------------------------------------------------------------
         comp_anly = compare_FB(data=mag_df[col],
                            cadence=dt.timedelta(seconds=60),
                            windows=[500,1000,2000,4000,8000])
+        # Overplot reconstruction with original and view residuals--------------------
         comp_anly.analyze_reconstruction(orig_sig_plot_title=f'[{args["start_year"]}-{args['start_month']}-{args['start_day']}] Original series ({col})',
                                          figsize=(8,5.5),
                                          rel_res_ylim=(-5,105))
+        # Side-by-side comparison: Filterbanks, reconstruction, & deconstruction------
         comp_anly.compare_decomp(orig_sig_plot_title=f'[{args["start_year"]}-{args['start_month']}-{args['start_day']}] Original series ({col})',
                                      figsize=(8.5,11),
                                      percent_rel_res=True,
