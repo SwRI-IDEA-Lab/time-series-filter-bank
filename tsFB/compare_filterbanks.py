@@ -314,8 +314,21 @@ class compare_FB:
             if i==1:
                 ax.tick_params(labelleft=False)
             
+            # # Plot Reconstruction
+            # ax1 = fig.add_subplot(gs[4:5,i])
+            # ax1.plot(x,fltrbnk['reconstruction'],color='darkblue')
+            # ax1.set_title(fb_name+' Signal Reconstruction')
+            # # ax1.set_xticks([])
+            # ax1.grid()
+            # ax1.tick_params(labelbottom=False)
+            # if i ==1:
+            #     ax1.tick_params(labelleft=False)
+        
+            decomp_gs = gridspec.GridSpecFromSubplotSpec(ncols=1,nrows=self.n_filters*2+3, 
+                                               subplot_spec=gs[4:,i],
+                                               hspace=0)
             # Plot Reconstruction
-            ax1 = fig.add_subplot(gs[4:5,i])
+            ax1 = fig.add_subplot(decomp_gs[0:2],sharex=ax0,sharey=ax0)
             ax1.plot(x,fltrbnk['reconstruction'],color='darkblue')
             ax1.set_title(fb_name+' Signal Reconstruction')
             # ax1.set_xticks([])
@@ -323,15 +336,12 @@ class compare_FB:
             ax1.tick_params(labelbottom=False)
             if i ==1:
                 ax1.tick_params(labelleft=False)
-        
-            decomp_gs = gridspec.GridSpecFromSubplotSpec(ncols=1,nrows=self.n_filters*2, 
-                                               subplot_spec=gs[5:,i],
-                                               hspace=0)
+
             for j,bank in enumerate(fltrbnk['filtered_sigs']):
-                ax2 = fig.add_subplot(decomp_gs[2*j:2*j+2])    
-                ax2.plot(bank)
+                ax2 = fig.add_subplot(decomp_gs[2*j+3:2*j+5],sharex=ax1)    
+                ax2.plot(x,bank)
                 if i ==1:
-                    ax2.text(x=0,y=max(bank),s=f'center freq = {fb_obj.center_freq[j]:.2e}',
+                    ax2.text(x=min(x),y=max(bank),s=f'center freq = {fb_obj.center_freq[j]:.2e}',
                             ha='right',va='top',
                             #  fontweight='bold',
                             fontsize=8,
