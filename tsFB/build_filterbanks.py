@@ -95,9 +95,13 @@ class filterbank:
     def build_triangle_fb(self, 
                           filter_freq_range = (0,5),
                           num_bands = 2,
-                          center_freq = None):
+                          center_freq = None,
+                          freq_units='hertz'):
         """Creates filterbank matrix of triangle filters.
+        
+        Provide either `num_bands` or `center_freq` and ALWAYS provide `filter_freq_range`.
         Parameters
+
         ----------
         filter_freq_range : tuple
             (min_freq,max_freq)
@@ -129,7 +133,7 @@ class filterbank:
         lower_edges = edge_freq[:-2]
         upper_edges = edge_freq[2:]
 
-        freqs = self.freq_spectrum['hertz']
+        freqs = self.freq_spectrum[freq_units]
         melmat = zeros((num_bands, len(freqs)))
 
         for iband, (center, lower, upper) in enumerate(zip(
