@@ -25,8 +25,8 @@ import tsFB.filterbank_analysis as fa
 
 # %%
 # %% Get data
-year = '2019'
-month = '05'
+year = '2006'
+month = '01'
 day = '01'
 
 start_dt = dt.datetime.strptime(f'{year}-{month}-{day}','%Y-%m-%d')
@@ -67,7 +67,7 @@ cadence = dt.timedelta(seconds=60)
 # ```
 
 # %%
-SM_window = dt.timedelta(seconds=500)
+SM_window = dt.timedelta(seconds=1100)
 DT_window = dt.timedelta(seconds=2000)
 
 # %% [markdown]
@@ -132,6 +132,34 @@ SM_theory = fb.moving_avg_freq_response(f=freq_spectrum,
 # %%
 FR_theory = DT_theory*SM_theory
 
+# %%
+mag_df.sort_index(inplace=True)
+mag_df.interpolate(method='index', kind='linear',limit_direction='both',inplace=True)
+df_index=pd.date_range(start=mag_df.index[0], end=mag_df.index[-1], freq=dt.timedelta(seconds=60))
+
+sig_fft_df = fft.rfftn(mag_df,axes=0)
+
+# %%
+# Apply filter: theoretical frequency response
+preprocessing = {'Detrended':DT_theory,'Smoothed':SM_theory,'Detrended + Smoothed':FR_theory}
+filtered_y={}
+for prepro in preprocessing.keys():
+    Y = sig_fft_df.ravel()*preprocessing[prepro]
+    filtered_y[prepro] = np.real(fft.irfft(Y))
+
+# %%
+fig,axes = plt.subplots(ncols=1,nrows=4,figsize=(12,8),sharex=True)
+
+axes[0].plot(mag_df)
+axes[0].set_title('Original signal')
+axes[0].grid()
+colors = ['tab:green','tab:orange','tab:purple']
+for i,p in enumerate(filtered_y.keys()):
+    axes[i+1].plot(mag_df.index[:-1],filtered_y[p],color=colors[i])
+    axes[i+1].set_title(p)
+    axes[i+1].grid()
+
+plt.show()
 # %%
 # plot frequency response
 
