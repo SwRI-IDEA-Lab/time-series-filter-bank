@@ -28,6 +28,7 @@ sys.path.append(_SRC_DIR)
 import tsFB.data.prototyping_metrics as pm
 import tsFB.utils.time_chunking as tc
 import tsFB.build_filterbanks as fb
+import tsFB.data.helper_funcs as hf
 
 # Data paths
 _PSP_MAG_DATA_DIR = '/sw-data/psp/mag_rtn/'
@@ -107,6 +108,67 @@ parser.add_argument(
     type=float
 )
 
+def read_file(
+        fname,
+        mag_df=None,
+        instrument='psp',
+        rads_norm=True,
+        orbit=None,
+    ):
+        """Read in the dataset and format it for input to SAX tree
+
+        Parameters
+        ----------
+        fname : str
+            The filename we wish to process
+        instrument: str
+            Solar wind instrument to analyze
+        rads_norm : bool
+            Boolean flag for indicating whether or not to perform radial normalization
+        """
+        # st_t = time.time()
+        # self._current_file = fname
+        if instrument == 'psp':
+            data_dir = _PSP_MAG_DATA_DIR
+        elif instrument=='wind' :
+            data_dir = _WIND_MAG_DATA_DIR
+        elif instrument == 'omni':
+            data_dir = _OMNI_MAG_DATA_DIR
+
+        # Generate the full path to the file
+        fname_full_path = os.path.join(
+            _SRC_DIR + data_dir,
+            *fname.split('/') # this is required do to behavior of os.join
+        )
+        # LOG.debug(f'Extracting data from:\n {fname_full_path}')
+        
+
+        if instrument == 'psp':
+            mag_df_new = pm.read_PSP_dataset(
+                fname=fname_full_path,
+                orbit=orbit,
+                rads_norm=rads_norm,
+                exponents_list=_EXPONENTS_LIST
+            )
+        elif instrument == 'wind':
+            mag_df_new = pm.read_WIND_dataset(
+                fname=fname_full_path
+            )
+        elif instrument == 'omni':
+            mag_df_new = pm.read_OMNI_dataset(
+                fname=fname_full_path
+            )
+        
+        mag_df_new['filename'] = [fname]*mag_df_new.shape[0]
+        
+        if mag_df is not None:  
+            # if self.mag_df is not empty, concat mag_df with existing self.mag_df
+            mag_df_final = pd.concat([mag_df, mag_df_new])            
+        else:        
+            # otherwise, self.mag_df is not built yet and this is first self.mag_df
+            mag_df_final = mag_df_new
+        return mag_df_final
+
 def get_test_data(fname_full_path=None,
                   fname = None,
                   instrument = 'omni',
@@ -135,20 +197,47 @@ def get_test_data(fname_full_path=None,
     orbit_fname : string, optional
         file path to psp orbit data
     """
-    if fname_full_path is None:
-        if instrument == 'psp':
-            data_dir = _PSP_MAG_DATA_DIR
-        elif instrument=='wind' :
-            data_dir = _WIND_MAG_DATA_DIR
-        elif instrument == 'omni':
-            data_dir = _OMNI_MAG_DATA_DIR
 
-        assert fname is not None, "Need to provide value for fname or fname_full_path"
-        # Generate the full path to the file
-        fname_full_path = os.path.join(
-            _SRC_DIR + data_dir,
-            *fname.split('/') # this is required do to behavior of os.join
+    # Data catalog file name to access based on instrument
+    if instrument == 'psp':
+        catalog_fname = 'psp_master_catalog_2018_2021_rads_norm.csv' 
+    elif instrument == 'wind':
+        catalog_fname = 'wind_master_catalog_2006_2022.csv'
+    elif instrument == 'omni':
+        catalog_fname = 'data/omni_master_catalog_1994_2023.csv'
+
+    catalog = pd.read_csv(
+            catalog_fname,
+            index_col=0
         )
+    if instrument == 'psp':
+        fmt = '%Y%m%d%H'
+    elif instrument == 'wind':
+        fmt = '%Y%m%d'
+    elif instrument == 'omni':
+        fmt = '%Y%m%d'
+    converter = lambda val: hf.fname_to_datetime(val, fmt=fmt)
+    dates = catalog['fname'].apply(converter)
+    catalog.index = pd.DatetimeIndex(dates, name='date')
+
+    catalog_cut = catalog[start_date:end_date]
+    flist = list(catalog_cut['fname'].values)
+    # LOG.info(f'Found {len(flist)} between {start_date} {stop_date}')
+    
+    # if fname_full_path is None:
+    #     if instrument == 'psp':
+    #         data_dir = _PSP_MAG_DATA_DIR
+    #     elif instrument=='wind' :
+    #         data_dir = _WIND_MAG_DATA_DIR
+    #     elif instrument == 'omni':
+    #         data_dir = _OMNI_MAG_DATA_DIR
+
+        # assert fname is not None, "Need to provide value for fname or fname_full_path"
+        # # Generate the full path to the file
+        # fname_full_path = os.path.join(
+        #     _SRC_DIR + data_dir,
+        #     *fname.split('/') # this is required do to behavior of os.join
+        # )
         
     if instrument == 'psp':
         if orbit_fname is not None:
@@ -178,10 +267,17 @@ def get_test_data(fname_full_path=None,
             fname=fname_full_path
         )
     mag_df.interpolate(inplace=True)
-    mag_df = mag_df[start_date:end_date]
-
-
-    return mag_df
+    
+    mag_df=None
+    for f in flist:
+        mag_df = read_file(fname = f,
+                            mag_df=mag_df,
+                            rads_norm=rads_norm,
+                            instrument=instrument)
+    
+    mag_df.interpolate(inplace=True)
+    mag_df=mag_df[start_date:end_date]
+    return mag_df[['B_mag','BX_GSE','BY_GSE','BZ_GSE']]
 
 def get_filtered_signals(data,
                          fb_matrix,
@@ -424,10 +520,10 @@ if __name__ == '__main__':
     fltbnk.build_triangle_fb(num_bands=4,
                         filter_freq_range=(0.0,0.001),
                         )
-    fb.visualize_filterbank(fb_matrix=fltbnk.fb_matrix,
-                         fftfreq=fltbnk.freq_spectrum['hertz'],
-                         xlim=(fltbnk.edge_freq[0],fltbnk.edge_freq[-1]),
-                         ylabel='Amplitude')
+    # fb.visualize_filterbank(fb_matrix=fltbnk.fb_matrix,
+    #                      fftfreq=fltbnk.freq_spectrum['hertz'],
+    #                      xlim=(fltbnk.edge_freq[0],fltbnk.edge_freq[-1]),
+    #                      ylabel='Amplitude')
     fltbnk.add_DC_HF_filters()
     fb.visualize_filterbank(fb_matrix=fltbnk.fb_matrix,
                          fftfreq=fltbnk.freq_spectrum['hertz'],
