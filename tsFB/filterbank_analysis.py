@@ -169,13 +169,10 @@ def read_file(
             mag_df_final = mag_df_new
         return mag_df_final
 
-def get_test_data(fname_full_path=None,
-                  fname = None,
-                  instrument = 'omni',
+def get_test_data(instrument = 'omni',
                   start_date = dt.datetime(year=2019,month=5,day=15,hour=0),
                   end_date = dt.datetime(year=2019,month=5,day=16,hour=0),
-                  rads_norm=True,
-                  orbit_fname = None):
+                  rads_norm=True):
     """Retrieve a set of data to test and visualize filterbank application
     
     Parameters
@@ -220,53 +217,18 @@ def get_test_data(fname_full_path=None,
     dates = catalog['fname'].apply(converter)
     catalog.index = pd.DatetimeIndex(dates, name='date')
 
-    catalog_cut = catalog[start_date:end_date]
-    flist = list(catalog_cut['fname'].values)
-    # LOG.info(f'Found {len(flist)} between {start_date} {stop_date}')
-    
-    # if fname_full_path is None:
-    #     if instrument == 'psp':
-    #         data_dir = _PSP_MAG_DATA_DIR
-    #     elif instrument=='wind' :
-    #         data_dir = _WIND_MAG_DATA_DIR
-    #     elif instrument == 'omni':
-    #         data_dir = _OMNI_MAG_DATA_DIR
+    if start_date.day != 1:
+        cat_start_dt = dt.datetime(year=start_date.year,month=start_date.month,day=1)
+    else:
+        cat_start_dt = start_date
 
-        # assert fname is not None, "Need to provide value for fname or fname_full_path"
-        # # Generate the full path to the file
-        # fname_full_path = os.path.join(
-        #     _SRC_DIR + data_dir,
-        #     *fname.split('/') # this is required do to behavior of os.join
-        # )
-        
-    if instrument == 'psp':
-        if orbit_fname is not None:
-            orbit_fname = os.path.join(
-            _SRC_DATA_DIR,
-            orbit_fname)
-            # orbit dataframe
-            orbit = pd.read_csv(
-                orbit_fname,
-                sep=",",
-                comment ="#",
-                index_col='EPOCH_yyyy-mm-ddThh:mm:ss.sssZ',
-                parse_dates=['EPOCH_yyyy-mm-ddThh:mm:ss.sssZ'],
-            )
-        mag_df = pm.read_PSP_dataset(
-            fname=fname_full_path,
-            orbit=orbit,
-            rads_norm=rads_norm,
-            exponents_list=_EXPONENTS_LIST
-        )
-    elif instrument == 'wind':
-        mag_df = pm.read_WIND_dataset(
-            fname=fname_full_path
-        )
-    elif instrument == 'omni':
-        mag_df = pm.read_OMNI_dataset(
-            fname=fname_full_path
-        )
-    mag_df.interpolate(inplace=True)
+    if end_date-start_date < dt.timedelta(weeks=4):
+        cat_end_dt = start_date + dt.timedelta(weeks=5)
+    else:
+        cat_end_dt = end_date
+
+    catalog_cut = catalog[cat_start_dt:cat_end_dt]
+    flist = list(catalog_cut['fname'].values)
     
     mag_df=None
     for f in flist:
@@ -509,8 +471,7 @@ if __name__ == '__main__':
     else:
         test_cdf_file_path = args['input_file']
     
-    mag_df = get_test_data(fname_full_path=test_cdf_file_path,
-                           start_date=args['start_date'],
+    mag_df = get_test_data(start_date=args['start_date'],
                            end_date=args['stop_date'])
     # mag_df = mag_df-mag_df.mean()
 
@@ -518,7 +479,8 @@ if __name__ == '__main__':
     fltbnk = fb.filterbank(data_len=len(mag_df),
                     cadence=dt.timedelta(seconds=60))
     fltbnk.build_triangle_fb(num_bands=4,
-                        filter_freq_range=(0.0,0.001),
+                        filter_freq_range=(0.1,0.45),
+                        freq_units='sample_rate_frac'
                         )
     # fb.visualize_filterbank(fb_matrix=fltbnk.fb_matrix,
     #                      fftfreq=fltbnk.freq_spectrum['hertz'],
@@ -526,22 +488,22 @@ if __name__ == '__main__':
     #                      ylabel='Amplitude')
     fltbnk.add_DC_HF_filters()
     fb.visualize_filterbank(fb_matrix=fltbnk.fb_matrix,
-                         fftfreq=fltbnk.freq_spectrum['hertz'],
+                         fftfreq=fltbnk.freq_spectrum['sample_rate_frac'],
                          xlim=(fltbnk.edge_freq[0],fltbnk.edge_freq[-1]),
-                         ylabel='Amplitude')
+                         ylabel='Amplitude',)
     
     # Visualize application
     for col in mag_df.columns:
         view_filter_decomposition(data=mag_df[col],
                                      fb_matrix=fltbnk.fb_matrix,
-                                     fftfreq=fltbnk.freq_spectrum['hertz'],
+                                     fftfreq=fltbnk.freq_spectrum['sample_rate_frac'],
                                      cadence=dt.timedelta(minutes=1),
                                      xlim = (fltbnk.edge_freq[0],fltbnk.edge_freq[-1]),
                                      center_freq = fltbnk.center_freq,
                                      orig_sig_plot_title=f'[{args["start_year"]}-{args['start_month']}-{args['start_day']}] Original series ({col})',
                                      plot_reconstruction=True,
-                                     plot_direct_residual=True,
-                                     plot_rel_residual=True,
+                                     plot_direct_residual=False,
+                                     plot_rel_residual=False,
                                      percent_rel_res=True,
                                      abs_residual=args['absolute_residual'],
                                      res_eps=args['residual_epsilon'])
