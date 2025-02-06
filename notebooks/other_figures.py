@@ -32,11 +32,9 @@ day = '01'
 start_dt = dt.datetime.strptime(f'{year}-{month}-{day}','%Y-%m-%d')
 end_dt = dt.datetime.strptime(f'{year}-{month}-{format(int(day)+1,'02')}','%Y-%m-%d')
 
-
-test_cdf_file_path =_SRC_DIR+fa._OMNI_MAG_DATA_DIR+ year +'/omni_hro_1min_'+ year+month+'01_v01.cdf'
-mag_df = fa.get_test_data(fname_full_path=test_cdf_file_path,
-                           start_date=start_dt,
-                           end_date=end_dt)
+os.chdir('/home/jkobayashi/gh_repos/time-series-filter-bank/')
+mag_df = fa.get_test_data(start_date=start_dt,
+                          end_date=end_dt)
 mag_df=mag_df['BX_GSE']
 
 # %% Prepare FT of test data for Fourier applications
@@ -67,8 +65,8 @@ cadence = dt.timedelta(seconds=60)
 # ```
 
 # %%
-SM_window = dt.timedelta(seconds=1100)
-DT_window = dt.timedelta(seconds=2000)
+SM_window = dt.timedelta(seconds=300)
+DT_window = dt.timedelta(seconds=600)
 
 # %% [markdown]
 # # Theoretical Frequency Response
@@ -178,19 +176,46 @@ tri1 = fb.filterbank(data_len=mag_df.shape[0],
 cadence=dt.timedelta(seconds=60))
 
 # %%
+cnt_fr_idx = np.argmax(FR_theory) # center frequency index = max value of smooth*detrend
+
 for i,f in enumerate(SM_theory[:-1]):
             if f - SM_theory[i+1] <0:
-                cnt_fr_idx = i
+                ue_fr_idx = i #upper edge frequency index
                 break
-
-# cnt_fr_idx = np.argmax(FR_theory)
-uef = tri1.freq_spectrum['hertz'][cnt_fr_idx]
+uef = tri1.freq_spectrum['hertz'][ue_fr_idx]
 
 tri1.build_triangle_fb(filter_freq_range=(0,uef),
-                       center_freq=[tri1.freq_spectrum['hertz'][np.argmax(FR_theory)]])
+                       center_freq=[tri1.freq_spectrum['hertz'][cnt_fr_idx]])
 
 plt.plot(tri1.freq_spectrum['sample_rate_frac'],FR_theory,label='Detrend*Smooth')
 plt.plot(tri1.freq_spectrum['sample_rate_frac'],tri1.fb_matrix.T,linestyle='dashdot')
 plt.ylabel('Amplitude')
 plt.xlabel('Frequency')
+# %%
+# compare max value and intersection point
+
+fig, axes = plt.subplots(nrows=1,ncols=1)
+axes.plot(tri1.freq_spectrum['sample_rate_frac'],SM_theory,linestyle='dotted',label='Smoothing')
+axes.plot(tri1.freq_spectrum['sample_rate_frac'],DT_theory,linestyle='dotted',label='Detrending')
+axes.plot(tri1.freq_spectrum['sample_rate_frac'],FR_theory,label='Detrend*Smooth')
+axes.vlines(tri1.freq_spectrum['sample_rate_frac'][cnt_fr_idx],ymin=0,ymax=1,colors='black')
+axes.set_ylabel('Amplitude')
+axes.set_xlabel("Frequency")
+# axes.set_title("Smoothing & Detrending",fontsize=12)
+axes.legend()
+
+
+
+# %%
+# preview/testing of >1 day frequency response
+mag_df1 = fa.get_test_data(start_date=dt.datetime(2000,1,1),
+                           end_date=dt.datetime(2020,1,1))
+data_len1 = mag_df1.shape[0]  
+freq_spectrum1= np.linspace(0.0001,1/2,(data_len1//2)+1)
+SM_test = fb.moving_avg_freq_response(f=freq_spectrum1,
+                                        window=dt.timedelta(days=365*11),
+                                        cadence=cadence)
+fig, axes = plt.subplots(nrows=1,ncols=1)
+axes.plot(freq_spectrum1,SM_test,linestyle='dotted',label='Smoothing')
+plt.show()
 # %%
