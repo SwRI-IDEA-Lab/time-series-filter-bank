@@ -15,6 +15,23 @@
       "interpreterPath":"$/home/jkobayashi/anaconda3/envs/idea-isax-sw/bin/python"
     },
     {
+      "name": "iSAX generate catalog",
+      "type": "python",
+      "request": "launch",
+      "console": "integratedTerminal",
+      "module": "${command:extension.commandvariable.file.relativeFileDotsNoExtension}",
+      "cwd": "${workspaceFolder}",
+      "justMyCode": false,
+      "args": [
+        "-start_year", "1994",
+        "-stop_year", "2023",
+        "-instrument", "omni",
+        "-data_path", "/home/jkobayashi/gh_repos/time-series-filter-bank/sw-data/nasaomnireader/",
+        // "-debug", "10"
+        "-histogram"
+      ]
+    },
+    {
       "name": "test analysis",
       "type": "python",
       "request": "launch",
@@ -23,10 +40,14 @@
       "cwd": "${workspaceFolder}",
       "justMyCode": false,
       "args": [
-        "-start_year", "1999",
-        "-start_month","12",
-        "-start_day","06",
+        "-start_year", "2000",
+        "-start_month","01",
+        "-start_day","01",
+        // "-stop_date","2020-01-01",
+        "-chunk_size","315360000",
         "-cadence", "60",
+        "-absolute_residual",
+        "-residual_epsilon","0.01"
       ]
     },
   ]
