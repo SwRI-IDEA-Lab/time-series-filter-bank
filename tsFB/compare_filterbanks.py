@@ -127,7 +127,7 @@ class compare_FB:
         # Mel (Triangle) Filterbank=====================================
         self.Tri_fb = bfb.filterbank(data_len=self.data_len,
                                      cadence=self.cadence)
-        self.Tri_fb.build_triangle_fb((0.0,np.sort(self.MA_fb.center_freq)[-1]),
+        self.Tri_fb.build_triangle_fb((np.sort(self.MA_fb.center_freq)[0],np.sort(self.MA_fb.center_freq)[-1]),
                                       center_freq=np.sort(self.MA_fb.center_freq[1:-1]))
         self.Tri_fb.add_DC_HF_filters()
 
@@ -260,7 +260,7 @@ class compare_FB:
                         freq_units:str=None,
                         figsize=(4,11),
                         gs_wspace = 0.1,
-                        gs_hspace = 0.5,
+                        gs_hspace = 0.3,
                         orig_sig_plot_title='Original Signal',
                         abs_residual=True,
                         percent_rel_res = True,
@@ -280,24 +280,27 @@ class compare_FB:
         y = self.data
 
         fig = plt.figure(figsize=figsize)
-        gs = gridspec.GridSpec(ncols = 2, nrows = self.n_filters+5,
+        gs = gridspec.GridSpec(ncols = 1, nrows = self.n_filters+3,
                             figure = fig,
                             wspace=gs_wspace, hspace=gs_hspace)
 
         # Original series=========================================================
-        ax0 = fig.add_subplot(gs[0:2,0:])   
+        ax0 = fig.add_subplot(gs[0:2])   
         ax0.plot(x, y,color='black',label='original')
         ax0.set_ylabel('(nT)')
         ax0.set_title(orig_sig_plot_title)
-        ax0.tick_params(labelbottom=False)
+        # ax0.tick_params(labelbottom=False)
         ax0.grid(True)
-        
+
+        two_col_gs = gridspec.GridSpecFromSubplotSpec(ncols=2,nrows=self.n_filters*2+9, 
+                                               subplot_spec=gs[2:],
+                                               hspace=0)
         for i, fb_name in enumerate(self.fb_analysis.keys()):
             fltrbnk = self.fb_analysis[fb_name]
             fb_obj = self.fb_analysis[fb_name]['fb_object']
             # Filterbank plot=====================================================
             xlim = (fb_obj.center_freq[0],fb_obj.center_freq[-1])
-            ax = fig.add_subplot(gs[2:3,i])  
+            ax = fig.add_subplot(two_col_gs[0:2,i])  
             ax.plot(fftfreq, fltrbnk['fb_matrix'].T)
             ax.grid(True)
             ax.set_xlabel('Frequency (Hz)')
@@ -311,21 +314,20 @@ class compare_FB:
             
 
             # Reconstruction & Decomposition======================================
-            decomp_gs = gridspec.GridSpecFromSubplotSpec(ncols=1,nrows=self.n_filters*2+3, 
-                                               subplot_spec=gs[4:,i],
-                                               hspace=0)
+            
             # Plot Reconstruction-------------------------------------------------
-            ax1 = fig.add_subplot(decomp_gs[0:2],sharex=ax0,sharey=ax0)
+            ax1 = fig.add_subplot(two_col_gs[5:7,i],sharex=ax0,sharey=ax0)
             ax1.plot(x,fltrbnk['reconstruction'],color='darkblue')
             ax1.set_title(fb_name+' Signal Reconstruction')
+            ax1.set_xticklabels(ax1.get_xticklabels(),rotation=20,ha='right',rotation_mode='anchor')
             ax1.grid()
-            ax1.tick_params(labelbottom=False)
+            # ax1.tick_params(labelbottom=False)
             if i ==1:
                 ax1.tick_params(labelleft=False)
 
             # Plot Decomposition--------------------------------------------------
             for j,bank in enumerate(fltrbnk['filtered_sigs']):
-                ax2 = fig.add_subplot(decomp_gs[2*j+3:2*j+5],sharex=ax1)    
+                ax2 = fig.add_subplot(two_col_gs[2*j+9:2*j+11,i],sharex=ax1,sharey=ax1)    
                 ax2.plot(x,bank)
                 if i ==1:
                     ax2.text(x=min(x),y=max(bank),s=f'center freq = {fb_obj.center_freq[j]:.2e}',
@@ -333,11 +335,17 @@ class compare_FB:
                             fontsize=8,
                             bbox=dict(facecolor='white', edgecolor='black',alpha=0.7))
                     ax2.tick_params(labelleft=False)
-                ax2.set_yticks([])
-                ax2.tick_params(labelbottom=False)
-                ax2.grid()
+                # ax2.set_yticks([])
+                
                 if j==0:
                     ax2.set_title(fb_name+' Signal Decomposition',fontsize=12)
+                    # ax2.tick_params(labeltop=True)
+                    ax2.tick_params(labelbottom=False)
+                elif j==len(fltrbnk['filtered_sigs'])-1:
+                    ax2.set_xticklabels(ax1.get_xticklabels(),rotation=25,ha='right',rotation_mode='anchor')
+                else:
+                    ax2.tick_params(labelbottom=False)
+                ax2.grid()
         plt.show()
 
 if __name__ == '__main__':
@@ -381,9 +389,8 @@ if __name__ == '__main__':
     else:
         test_cdf_file_path = args['input_file']
     
-    mag_df = fba.get_test_data(fname_full_path=test_cdf_file_path,
-                           start_date=args['start_date'],
-                           end_date=args['stop_date'])
+    mag_df = fba.get_test_data(start_date=args['start_date'],
+                               end_date=args['stop_date'])
     # mag_df = mag_df-mag_df.mean()
     
     # Visualize application============================================================
@@ -391,14 +398,18 @@ if __name__ == '__main__':
         # instantiate------------------------------------------------------------------
         comp_anly = compare_FB(data=mag_df[col],
                            cadence=dt.timedelta(seconds=60),
-                           windows=[500,1000,2000,4000,8000])
+                           windows=[200,500,800,1000,2000])
+                            # windows=[dt.timedelta(weeks=4*6).seconds,dt.timedelta(365*2).seconds,dt.timedelta(days=365*11).seconds])
+
         # Overplot reconstruction with original and view residuals--------------------
-        comp_anly.analyze_reconstruction(orig_sig_plot_title=f'[{args["start_year"]}-{args['start_month']}-{args['start_day']}] Original series ({col})',
-                                         figsize=(8,5.5),
-                                         rel_res_ylim=(-5,105))
+        # comp_anly.analyze_reconstruction(orig_sig_plot_title=f'[{args["start_year"]}-{args['start_month']}-{args['start_day']}] Original series ({col})',
+        #                                  figsize=(8,5.5),
+        #                                  rel_res_ylim=(-5,105))
+        
         # Side-by-side comparison: Filterbanks, reconstruction, & deconstruction------
         comp_anly.compare_decomp(orig_sig_plot_title=f'[{args["start_year"]}-{args['start_month']}-{args['start_day']}] Original series ({col})',
                                      figsize=(8.5,11),
                                      percent_rel_res=True,
                                      abs_residual=args['absolute_residual'],
-                                     res_eps=args['residual_epsilon'])
+                                     res_eps=args['residual_epsilon'],
+                                     gs_hspace=1.2)
