@@ -130,6 +130,7 @@ class filterbank:
             edge_freq = [freq_min] + center_freq + [freq_max]
             num_bands = len(center_freq)
 
+        # Build triangle filters
         lower_edges = edge_freq[:-2]
         upper_edges = edge_freq[2:]
 
@@ -182,6 +183,7 @@ class filterbank:
                           HF = True):
         # DC
         if DC and not self.DC:
+            self.DC=True
             # update fb_matrix
             DC_filter = 1-self.fb_matrix[0,:]
             minin = (DC_filter == np.min(DC_filter)).nonzero()[0][0]
@@ -195,6 +197,7 @@ class filterbank:
                 self.upper_edges = np.insert(self.upper_edges,0,self.edge_freq[1])
         # HF
         if HF and not self.HF:
+            self.HF=True
             # update fb_matrix
             HF_filter = 1-self.fb_matrix[-1,:]
             minin = (HF_filter == np.min(HF_filter)).nonzero()[0][0]
@@ -207,8 +210,6 @@ class filterbank:
             if self.lower_edges[-1] != self.edge_freq[-2]:
                 self.lower_edges = np.append(self.lower_edges,self.edge_freq[-2])
         self.update_center_freq_idx()
-        self.DC = DC
-        self.HF = HF
 
     def add_mvgavg_DC_HF(self,
                          DC = True,
