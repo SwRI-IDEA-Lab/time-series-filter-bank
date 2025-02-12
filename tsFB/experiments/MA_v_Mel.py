@@ -136,11 +136,8 @@ def run_compare_exp(start_date=dt.datetime(year=2000,month=1,day=1,hour=0),
     month_str = format(start_date.month,'02')
     day_str = format(start_date.day,'02')
     
-    test_cdf_file_path =_SRC_DIR+fba._OMNI_MAG_DATA_DIR+ year_str +'/omni_hro_1min_'+ year_str+month_str+'01_v01.cdf'
-
-    mag_df = fba.get_test_data(fname_full_path=test_cdf_file_path,
-                            start_date=start_date,
-                            end_date=end_date)
+    mag_df = fba.get_test_data(start_date=start_date,
+                               end_date=end_date)
     
     
     for i,col in enumerate(mag_df.columns):
@@ -164,6 +161,7 @@ def run_compare_exp(start_date=dt.datetime(year=2000,month=1,day=1,hour=0),
             plt.xlabel('Frequency (Hz)')
             plt.grid()
             plt.title('Both filterbank types in single plot')
+            plt.xticks(comp_fb.center_freq['hertz'])
             plt.show()
 
             # Sum of filterbank amplitudes
@@ -230,7 +228,7 @@ if __name__ == '__main__':
     run_compare_exp(start_date=args['start_date'],
                     end_date=args['stop_date'],
                     cadence=args['cadence'],
-                    windows=[500,1000,2000,4000,8000],
+                    windows=[200,500,900,1700,3400],
                     freq_units=args['freq_units'],
                     figsize=(8,11),
                     res_eps=args['res_eps']
