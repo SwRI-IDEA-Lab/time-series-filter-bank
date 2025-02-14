@@ -475,13 +475,28 @@ if __name__ == '__main__':
                            end_date=args['stop_date'])
     # mag_df = mag_df-mag_df.mean()
 
+    # variables for 11years
+    y11 = dt.timedelta(days=365*11)     # 11 years
+    n_y11 = y11.total_seconds()/60      # number of data points (with cadence of 60secs) in 11 years 
+    y11_freq = 1/n_y11                  # n-point frequency of 11 years
+
+    # variables for 1 year
+    y1 = dt.timedelta(days=365)         # 1 year
+    n_y1 = y1.total_seconds()/60        # number of data points (with cadence of 60secs) in 1 year 
+    y1_freq = 1/n_y1                    # n-point frequency of 1 years
+
+    # variable for 1 day
+    d1 = dt.timedelta(days=1)
+    n_d1 = d1.total_seconds()/60
+    d1_freq = 1/n_d1
+
     # Build Filterbank
     fltbnk = fb.filterbank(data_len=len(mag_df),
                     cadence=dt.timedelta(seconds=60))
-    fltbnk.build_triangle_fb(num_bands=4,
-                        filter_freq_range=(0.1,0.45),
-                        freq_units='sample_rate_frac'
-                        )
+    fltbnk.build_triangle_fb(filter_freq_range=(y11_freq,d1_freq),
+                             center_freq=[y1_freq],
+                             freq_units='sample_rate_frac'
+                             )
     # fb.visualize_filterbank(fb_matrix=fltbnk.fb_matrix,
     #                      fftfreq=fltbnk.freq_spectrum['hertz'],
     #                      xlim=(fltbnk.edge_freq[0],fltbnk.edge_freq[-1]),
@@ -489,21 +504,22 @@ if __name__ == '__main__':
     fltbnk.add_DC_HF_filters()
     fb.visualize_filterbank(fb_matrix=fltbnk.fb_matrix,
                          fftfreq=fltbnk.freq_spectrum['sample_rate_frac'],
-                         xlim=(fltbnk.edge_freq[0],fltbnk.edge_freq[-1]),
+                        #  xlim=(fltbnk.edge_freq[0],fltbnk.edge_freq[-1]),
                          ylabel='Amplitude',)
     
     # Visualize application
     for col in mag_df.columns:
         view_filter_decomposition(data=mag_df[col],
-                                     fb_matrix=fltbnk.fb_matrix,
-                                     fftfreq=fltbnk.freq_spectrum['sample_rate_frac'],
-                                     cadence=dt.timedelta(minutes=1),
-                                     xlim = (fltbnk.edge_freq[0],fltbnk.edge_freq[-1]),
-                                     center_freq = fltbnk.center_freq,
-                                     orig_sig_plot_title=f'[{args["start_year"]}-{args['start_month']}-{args['start_day']}] Original series ({col})',
-                                     plot_reconstruction=True,
-                                     plot_direct_residual=False,
-                                     plot_rel_residual=False,
-                                     percent_rel_res=True,
-                                     abs_residual=args['absolute_residual'],
-                                     res_eps=args['residual_epsilon'])
+                                  fb_matrix=fltbnk.fb_matrix,
+                                  fftfreq=fltbnk.freq_spectrum['sample_rate_frac'],
+                                  cadence=dt.timedelta(minutes=1),
+                                  figsize=(11,8.5),
+                                  xlim = (fltbnk.edge_freq[0],fltbnk.edge_freq[-1]),
+                                  center_freq = fltbnk.center_freq,
+                                  orig_sig_plot_title=f'[{args["start_year"]}-{args['start_month']}-{args['start_day']}] Original series ({col})',
+                                  plot_reconstruction=False,
+                                  plot_direct_residual=False,
+                                  plot_rel_residual=False,
+                                  percent_rel_res=True,
+                                  abs_residual=args['absolute_residual'],
+                                  res_eps=args['residual_epsilon'])
