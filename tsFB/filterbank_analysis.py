@@ -304,17 +304,12 @@ def view_filter_decomposition(data,
                             cadence = dt.timedelta(seconds=300),
                             figsize=(4,11),
                             gs_wspace = 0.2,
-                            gs_hspace = 0.5,
-                            xlim = None,
+                            gs_hspace = 0.0,
+                            fb_xlim = None,
                             center_freq = None,
                             filterbank_plot_title='Filter bank',
                             orig_sig_plot_title='Original Signal',
                             plot_reconstruction=False,
-                            plot_direct_residual = False,
-                            plot_rel_residual=False,
-                            abs_residual=True,
-                            percent_rel_res = True,
-                            res_eps = 0.01,
                             ):
     """Plot comprehensive visualization of filterbank and its application to a set of test data.
     Plot includes the filterbank, raw test data, decomposition of filterbank preprocessed data.
@@ -323,115 +318,69 @@ def view_filter_decomposition(data,
     ----------
     
     """
-    fig = plt.figure(figsize=figsize)
-    gs = gridspec.GridSpec(ncols = 1, nrows = fb_matrix.shape[0]+6,
-                          figure = fig,
-                          wspace=gs_wspace, hspace=gs_hspace)
-    
     x = data.index
     y = data
 
+    gs_recon = 3 if plot_reconstruction else 0
+    # initialize gridspec
+    fig = plt.figure(figsize=figsize)
+    gs = gridspec.GridSpec(ncols = 1, 
+                           nrows = 3+3+gs_recon+fb_matrix.shape[0]*2,
+                           figure = fig,
+                           wspace=gs_wspace, 
+                           hspace=gs_hspace)
+    
+    # Original series
+    ax0 = fig.add_subplot(gs[0:2])   
+    ax0.plot(data,color='black',label='original')
+    ax0.set_ylabel('(nT)')
+    ax0.set_title(orig_sig_plot_title)
+    ax0.grid(True)
+
     # Filterbank plot
-    if xlim is None:
-        xlim = (fftfreq[0],fftfreq[-1])
-    ax = fig.add_subplot(gs[0:1])  
-    ax.plot(fftfreq, fb_matrix.T)
-    ax.grid(True)
-    # ax.set_ylabel('Weight')
-    ax.set_xlabel('Frequency (Hz)')
-    ax.set_xlim(xlim)
-    ax.set_title(filterbank_plot_title)
-    ax.set_xticks(center_freq)
-    ax.tick_params(rotation=35,labelsize=8,axis='x')
-    ax.ticklabel_format(style='sci',scilimits=(0,0),axis='x')
+    if fb_xlim is None:
+        fb_xlim = (fftfreq[0],fftfreq[-1])
+    ax1 = fig.add_subplot(gs[3:4])  
+    ax1.plot(fftfreq, fb_matrix.T)
+    ax1.grid(True)
+    ax1.set_xlabel('Frequency (Hz)')
+    ax1.set_xlim(fb_xlim)
+    ax1.set_title(filterbank_plot_title)
+    ax1.set_xticks(center_freq)
+    ax1.tick_params(rotation=35,labelsize=8,axis='x')
+    ax1.ticklabel_format(style='sci',scilimits=(0,0),axis='x')
+
+    # Reconstruction (on top of original)
+    if plot_reconstruction:
+        ax2 = fig.add_subplot(gs[6:8],sharex=ax0,sharey=ax0)
+        ax2.plot(x,np.sum(filtered_df,axis=0),linestyle='dotted',alpha=0.9,label='filterbank reconstruction')
+        ax2.legend(loc='upper right',bbox_to_anchor=(1.1, 1.2),fontsize=8)
+        last_gs = 9
+    else:
+        last_gs = 6
     
     # Filtered Signal Decomposition
     filtered_df = get_filtered_signals(data=data,
                                        fb_matrix=fb_matrix,
                                        fftfreq=fftfreq,
                                        cadence=cadence)
-    gs2 = gridspec.GridSpecFromSubplotSpec(ncols=1,nrows=fb_matrix.shape[0]*2, subplot_spec=gs[6:-1],hspace=0)
     for i,bank in enumerate(filtered_df):
-
-        ax0 = fig.add_subplot(gs2[2*i:2*i+2])    
-        ax0.plot(bank)
-        ax0.text(x=0.0,y=max(bank),s=f'center freq = {center_freq[i]:.2e}',
+        ax3 = fig.add_subplot(gs[last_gs+2*i:last_gs+2*i+2],sharex=ax0)    
+        ax3.plot(x,bank)
+        ax3.text(x=min(x),y=max(bank),s=f'center freq = {center_freq[i]:.2e}',
                  ha='left',va='top',
-                #  fontweight='bold',
-                fontsize=8,
+                 fontsize=8,
                  bbox=dict(facecolor='white', edgecolor='black',alpha=0.7))
-        ax0.set_xticks([])
-        ax0.set_yticks([])
-        # ax0.set_ylim(min(filtered_df[i]),max(filtered_df[i])+(max(filtered_df[i])*0.5))
-
+        if i != filtered_df.shape[0]-1:
+            ax3.tick_params(labelbottom=False)
+        ax3.grid(True)
         if i==0:
-            ax0.set_title('Signal decomposition',fontsize=15)
-        
-    # Original series
-    gs1 = gridspec.GridSpecFromSubplotSpec(ncols = 1, nrows = 6, subplot_spec=gs[2:5],hspace=0)
-    ax0 = fig.add_subplot(gs1[0:2])   
-    ax0.plot(x, y,label='original')
-    ax0.set_ylabel('(nT)')
-    ax0.set_title(orig_sig_plot_title)
-    ax0.tick_params(labelbottom=False)
-    # ax0.set_xticks([])
-    # ax0.set_yticks([])
-    ax0.grid(True)
-
-    # Reconstruction (on top of original)
-    last_gs = 0
-    if plot_reconstruction:
-        ax0.plot(x,np.sum(filtered_df,axis=0),linestyle='dotted',alpha=0.9,label='filterbank reconstruction')
-        ax0.legend(loc='upper right',bbox_to_anchor=(1.1, 1.2),fontsize=8)
-    
-    # Direct Residual
-    if plot_direct_residual:
-        res = get_reconstruction_residuals(filtered_df=filtered_df,
-                                           real_signal=y,
-                                           relative=False,
-                                           percent=False,
-                                           absolute=abs_residual)
-        last_gs+=2
-        ax1 = fig.add_subplot(gs1[last_gs:last_gs+2])
-        ax1.plot(x,res)
-        ax1.set_title('Direct Residual',y=1.0,pad=-14,
-                    #   fontweight='bold',
-                    fontsize=10,
-                      bbox=dict(facecolor='white', edgecolor='black',alpha=0.7))
-        ax1.tick_params(labelbottom=False)
-        ax1.set_ylabel('(nT)')
-        ax1.set_ylim(min(res),max(res)+(max(res)*0.5))
-        # ax1.get_xaxis().set_visible(False)
-        # ax1.set_xticks([])
-        ax1.grid(True)
-
-    # Relative Residual
-    if plot_rel_residual:
-        rel_res = get_reconstruction_residuals(filtered_df=filtered_df,
-                                           real_signal=y,
-                                           relative=True,
-                                           percent=percent_rel_res,
-                                           absolute=abs_residual,
-                                           epsilon=res_eps)
-        last_gs+=2
-        ax2 = fig.add_subplot(gs1[last_gs:last_gs+2])
-        ax2.plot(x,rel_res)
-        ax2.grid(True)
-        ax2.set_ylim(min(rel_res),max(rel_res)+(max(rel_res)*0.5))
-        ax2.tick_params(labelbottom=False)
-        # ax2.set_xticks([])
-        ax2.set_title('Relative Residual',y=1.0,pad=-14,
-                    #   fontweight='bold',
-                    fontsize=10,
-                      bbox=dict(facecolor='white', edgecolor='black',alpha=0.7))
-        if percent_rel_res:
-            ax2.set_ylabel('% error')
-        ax2.set_xlabel('Time')
+            ax3.set_title('Signal decomposition',fontsize=15)
     plt.show()
     
 
 if __name__ == '__main__':
-    # args--------------------------------------------------
+    # args==============================================================
     args = vars(parser.parse_args())
     if args['start_date'] is None:
         if args['start_year'] is None:
@@ -461,40 +410,30 @@ if __name__ == '__main__':
         )
 
     args['cadence'] = dt.timedelta(seconds=args['cadence'])
-    # -------------------------------------------------------
-
-    # Test data
-    if args['input_file'] is None:
-        year = str(args['start_year'])
-        month = str(args['start_month'])
-        test_cdf_file_path =_SRC_DIR+_OMNI_MAG_DATA_DIR+ year +'/omni_hro_1min_'+ year+month+'01_v01.cdf'
-    else:
-        test_cdf_file_path = args['input_file']
     
+
+    # Test data=========================================================
     mag_df = get_test_data(start_date=args['start_date'],
-                           end_date=args['stop_date'])
+                               end_date=args['stop_date'])
     # mag_df = mag_df-mag_df.mean()
 
     # variables for 11years
-    y11 = dt.timedelta(days=365*11)     # 11 years
-    n_y11 = y11.total_seconds()/60      # number of data points (with cadence of 60secs) in 11 years 
-    y11_freq = 1/n_y11                  # n-point frequency of 11 years
+    y11_freq = fb.time_window_to_npt_freq(dt.timedelta(days=365*11),
+                                          data_cadence=dt.timedelta(minutes=1))
 
-    # variables for 1 year
-    y1 = dt.timedelta(days=365)         # 1 year
-    n_y1 = y1.total_seconds()/60        # number of data points (with cadence of 60secs) in 1 year 
-    y1_freq = 1/n_y1                    # n-point frequency of 1 years
-
+    # frequencies based on windows
+    windows = [dt.timedelta(days=365*2)]
+    cntr_freq = [fb.time_window_to_npt_freq(w,data_cadence=dt.timedelta(minutes=1)) for w in windows]
+    
     # variable for 1 day
-    d1 = dt.timedelta(days=1)
-    n_d1 = d1.total_seconds()/60
-    d1_freq = 1/n_d1
+    d1_freq = fb.time_window_to_npt_freq(dt.timedelta(days=1),
+                                         data_cadence=dt.timedelta(minutes=1))
 
     # Build Filterbank
     fltbnk = fb.filterbank(data_len=len(mag_df),
-                    cadence=dt.timedelta(seconds=60))
+                           cadence=dt.timedelta(seconds=60))
     fltbnk.build_triangle_fb(filter_freq_range=(y11_freq,d1_freq),
-                             center_freq=[y1_freq],
+                             center_freq=cntr_freq,
                              freq_units='sample_rate_frac'
                              )
     # fb.visualize_filterbank(fb_matrix=fltbnk.fb_matrix,
@@ -502,24 +441,20 @@ if __name__ == '__main__':
     #                      xlim=(fltbnk.edge_freq[0],fltbnk.edge_freq[-1]),
     #                      ylabel='Amplitude')
     fltbnk.add_DC_HF_filters()
-    fb.visualize_filterbank(fb_matrix=fltbnk.fb_matrix,
-                         fftfreq=fltbnk.freq_spectrum['sample_rate_frac'],
-                        #  xlim=(fltbnk.edge_freq[0],fltbnk.edge_freq[-1]),
-                         ylabel='Amplitude',)
+    # fb.visualize_filterbank(fb_matrix=fltbnk.fb_matrix,
+    #                      fftfreq=fltbnk.freq_spectrum['sample_rate_frac'],
+    #                     #  xlim=(fltbnk.edge_freq[0],fltbnk.edge_freq[-1]),
+    #                      ylabel='Amplitude',)
     
     # Visualize application
+    title_date_range = f'[{args["start_date"].year}-{format(args['start_date'].month,'02')}-{format(args['start_date'].day,'02')} to {args["stop_date"].year}-{format(args['stop_date'].month,'02')}-{format(args['stop_date'].day,'02')}]'
     for col in mag_df.columns:
         view_filter_decomposition(data=mag_df[col],
                                   fb_matrix=fltbnk.fb_matrix,
                                   fftfreq=fltbnk.freq_spectrum['sample_rate_frac'],
                                   cadence=dt.timedelta(minutes=1),
                                   figsize=(11,8.5),
-                                  xlim = (fltbnk.edge_freq[0],fltbnk.edge_freq[-1]),
+                                  fb_xlim = (fltbnk.edge_freq[0],fltbnk.edge_freq[-1]),
                                   center_freq = fltbnk.center_freq,
-                                  orig_sig_plot_title=f'[{args["start_year"]}-{args['start_month']}-{args['start_day']}] Original series ({col})',
-                                  plot_reconstruction=False,
-                                  plot_direct_residual=False,
-                                  plot_rel_residual=False,
-                                  percent_rel_res=True,
-                                  abs_residual=args['absolute_residual'],
-                                  res_eps=args['residual_epsilon'])
+                                  orig_sig_plot_title=f'{title_date_range} Original series ({col})',
+                                  plot_reconstruction=False)
