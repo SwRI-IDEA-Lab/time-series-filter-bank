@@ -46,6 +46,11 @@ def visualize_filterbank(fb_matrix,
     plt.tight_layout()
     plt.show()
 
+def time_window_to_npt_freq(window:dt.timedelta,
+                            data_cadence:dt.timedelta):
+    n_pts = window.total_seconds()/data_cadence.total_seconds()
+    return 1/n_pts
+
 class filterbank:
     def __init__(self,
                  data_len:int,
@@ -183,13 +188,13 @@ class filterbank:
                           HF = True):
         # DC
         if DC and not self.DC:
-            self.DC=True
             # update fb_matrix
             DC_filter = 1-self.fb_matrix[0,:]
             minin = (DC_filter == np.min(DC_filter)).nonzero()[0][0]
             DC_filter[minin:] = 0
             self.fb_matrix = np.append(DC_filter[None,:], self.fb_matrix, axis=0)
-
+            
+            self.DC=True
             # update edge frequency lists
             if self.center_freq[0] != self.edge_freq[0]:
                 self.center_freq = np.insert(self.center_freq,0,self.edge_freq[0])
@@ -197,13 +202,13 @@ class filterbank:
                 self.upper_edges = np.insert(self.upper_edges,0,self.edge_freq[1])
         # HF
         if HF and not self.HF:
-            self.HF=True
             # update fb_matrix
             HF_filter = 1-self.fb_matrix[-1,:]
             minin = (HF_filter == np.min(HF_filter)).nonzero()[0][0]
             HF_filter[0:minin] = 0
             self.fb_matrix = np.append(self.fb_matrix, HF_filter[None,:], axis=0)
 
+            self.HF=True
             # update edge frequency lists
             if self.center_freq[-1] != self.edge_freq[-1]:
                 self.center_freq = np.append(self.center_freq,self.edge_freq[-1])
@@ -213,10 +218,19 @@ class filterbank:
 
     def add_mvgavg_DC_HF(self,
                          DC = True,
+                         DC_flat_window = None,
+                         DC_SM_window = None,
                          HF = True):
+        #TODO: Finish trying to implement of flat top DC window (but should still work when DC does not include flattop portion)
         if DC and not self.DC:
+            if DC_flat_window is not None:
+                flat_n_w = DC_flat_window/self.cadence
+                flat_f_width = 1/flat_n_w
+                
+            if DC_SM_window is None:
+                DC_SM_window = max(self.windows)
             SM = moving_avg_freq_response(f=self.freq_spectrum['sample_rate_frac'],
-                                            window=dt.timedelta(seconds=max(self.windows)),
+                                            window=dt.timedelta(seconds=DC_SM_window),
                                             cadence=self.cadence)
             self.fb_matrix = np.append(SM[None,:],self.fb_matrix,axis=0)
             self.DC = True
