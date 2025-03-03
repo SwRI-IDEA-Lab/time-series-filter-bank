@@ -169,7 +169,7 @@ axes.set_ylabel('Amplitude')
 axes.set_xlabel("Frequency")
 # axes.set_title("Smoothing & Detrending",fontsize=12)
 axes.legend()
-
+# plt.close()
 
 # %%
 tri1 = fb.filterbank(data_len=mag_df.shape[0],
@@ -191,6 +191,7 @@ plt.plot(tri1.freq_spectrum['sample_rate_frac'],FR_theory,label='Detrend*Smooth'
 plt.plot(tri1.freq_spectrum['sample_rate_frac'],tri1.fb_matrix.T,linestyle='dashdot')
 plt.ylabel('Amplitude')
 plt.xlabel('Frequency')
+# plt.close()
 # %%
 # compare max value and intersection point
 
@@ -203,19 +204,101 @@ axes.set_ylabel('Amplitude')
 axes.set_xlabel("Frequency")
 # axes.set_title("Smoothing & Detrending",fontsize=12)
 axes.legend()
-
+# plt.close()
 
 
 # %%
 # preview/testing of >1 day frequency response
 mag_df1 = fa.get_test_data(start_date=dt.datetime(2000,1,1),
-                           end_date=dt.datetime(2020,1,1))
+                           end_date=dt.datetime(2011,1,1))
 data_len1 = mag_df1.shape[0]  
-freq_spectrum1= np.linspace(0.0001,1/2,(data_len1//2)+1)
-SM_test = fb.moving_avg_freq_response(f=freq_spectrum1,
-                                        window=dt.timedelta(days=365*11),
+freq_spectrum1= np.linspace(0.0,1/2,(data_len1//2)+1)
+SM_test2 = fb.moving_avg_freq_response(f=freq_spectrum1,
+                                        window=dt.timedelta(days=2),
                                         cadence=cadence)
+# SM_test11 = fb.moving_avg_freq_response(f=freq_spectrum1,
+#                                         window=dt.timedelta(days=365*11),
+#                                         cadence=cadence)
 fig, axes = plt.subplots(nrows=1,ncols=1)
-axes.plot(freq_spectrum1,SM_test,linestyle='dotted',label='Smoothing')
+axes.plot(freq_spectrum1,SM_test2,linestyle='dotted',label='Smoothing')
+# axes.plot(freq_spectrum1,SM_test11,linestyle='dotted',label='Smoothing')
+plt.show()
+
+# %%
+def sinc(x):
+      return np.sin(x)/x
+
+def mod_sinc(x,w):
+      num = np.sin(x*w*np.pi)
+      den = w*np.sin(x*np.pi)
+      return num/den
+
+ # %%
+x = np.linspace(0,2,1000)
+w_sec = 60*20
+
+fig, axes = plt.subplots(nrows=1,ncols=1)
+axes.plot(x,np.sin(x*np.pi),label='sin(x*$\pi$)')
+
+axes.plot(x,sinc(x*np.pi),label='sinc(x*$\pi$)')
+axes.plot(x,np.abs(sinc(x*np.pi)),label='|sinc(x*$\pi$)|')
+
+axes.plot(x,mod_sinc(x,w=int(w_sec/60)),label='modified sinc')
+axes.plot(x,fb.moving_avg_freq_response(x,dt.timedelta(seconds=w_sec)),label='Mov. Avg. FR')
+
+axes.set_title(f'Window = {w_sec}; Cadence = 60 seconds; n = {int(w_sec/60)}')
+# axes.plot(x,np.cos(x*np.pi),linestyle='dashed',label='cos(x)')
+axes.grid()
+axes.legend()
 plt.show()
 # %%
+x = np.linspace(0,0.5,1000)
+cad_sec = 60        # cadence of data in seconds
+n = 20              # window size in # of sample points
+w_sec = cad_sec*n   # window size in seconds
+
+first_zero = (0.5*2)/(n)   # lol so the window is 1/f
+
+fig, axes = plt.subplots(nrows=1,ncols=1)
+axes.plot(x,fb.moving_avg_freq_response(x,dt.timedelta(seconds=w_sec)),label='Mov. Avg. FR')
+axes.plot(first_zero,0,'x')
+axes.set_title(f'Window = {w_sec}; Cadence = {cad_sec} seconds; n = {n}')
+# axes.plot(x,np.cos(x*np.pi),linestyle='dashed',label='cos(x)')
+axes.grid()
+axes.legend()
+plt.show()
+# %%
+x = np.linspace(0,0.5,1000)
+cad_sec = 60        # cadence of data in seconds
+n = 20              # window size in # of sample points
+n0 = 40
+w_sec = cad_sec*n   # window size in seconds
+
+first_zero = (0.5*2)/(n)   # lol so the window is 1/f
+
+fig, axes = plt.subplots(nrows=1,ncols=1)
+axes.plot(x+(1/n0),fb.moving_avg_freq_response(x-(n0*cad_sec),dt.timedelta(seconds=w_sec)),label='Mov. Avg. FR')
+axes.plot(first_zero+(1/n0),0,'x')
+axes.vlines(1/n0,0,1,'black')
+axes.set_title(f'Window = {w_sec}; Cadence = {cad_sec} seconds; n = {n}')
+# axes.plot(x,np.cos(x*np.pi),linestyle='dashed',label='cos(x)')
+axes.grid()
+axes.legend()
+plt.show()
+# %%
+ # Build Filterbank
+fltbnk = fb.filterbank(data_len=len(mag_df),
+                        cadence=dt.timedelta(seconds=60))
+fltbnk.build_triangle_fb(filter_freq_range=(0.1,0.4),
+                            center_freq=[0.2,0.3],
+                            freq_units='sample_rate_frac'
+                            )
+# fb.visualize_filterbank(fb_matrix=fltbnk.fb_matrix,
+#                      fftfreq=fltbnk.freq_spectrum['hertz'],
+#                      xlim=(fltbnk.edge_freq[0],fltbnk.edge_freq[-1]),
+#                      ylabel='Amplitude')
+fltbnk.add_DC_HF_filters()
+fb.visualize_filterbank(fb_matrix=fltbnk.fb_matrix,
+                        fftfreq=fltbnk.freq_spectrum['sample_rate_frac'],
+                    #  xlim=(fltbnk.edge_freq[0],fltbnk.edge_freq[-1]),
+                        ylabel='Amplitude',)
