@@ -343,10 +343,10 @@ def view_filter_decomposition(data,
     ax1 = fig.add_subplot(gs[3:4])  
     ax1.plot(fftfreq, fb_matrix.T)
     ax1.grid(True)
-    ax1.set_xlabel('Frequency (Hz)')
+    ax1.set_xlabel('Frequency')
     ax1.set_xlim(fb_xlim)
     ax1.set_title(filterbank_plot_title)
-    ax1.set_xticks(center_freq)
+    # ax1.set_xticks(center_freq)
     ax1.tick_params(rotation=35,labelsize=8,axis='x')
     ax1.ticklabel_format(style='sci',scilimits=(0,0),axis='x')
 
@@ -422,7 +422,7 @@ if __name__ == '__main__':
                                           data_cadence=dt.timedelta(minutes=1))
 
     # frequencies based on windows
-    windows = [dt.timedelta(days=365*2)]
+    windows = [dt.timedelta(days=365*0.5),dt.timedelta(days=15)]
     cntr_freq = [fb.time_window_to_npt_freq(w,data_cadence=dt.timedelta(minutes=1)) for w in windows]
     
     # variable for 1 day
@@ -454,7 +454,7 @@ if __name__ == '__main__':
                                   fftfreq=fltbnk.freq_spectrum['sample_rate_frac'],
                                   cadence=dt.timedelta(minutes=1),
                                   figsize=(11,8.5),
-                                  fb_xlim = (fltbnk.edge_freq[0],fltbnk.edge_freq[-1]),
+                                  fb_xlim = (0,fltbnk.edge_freq[-1]),
                                   center_freq = fltbnk.center_freq,
                                   orig_sig_plot_title=f'{title_date_range} Original series ({col})',
                                   plot_reconstruction=False)
