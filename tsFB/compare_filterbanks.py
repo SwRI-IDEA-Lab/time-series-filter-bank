@@ -289,7 +289,6 @@ class compare_FB:
         ax0.plot(x, y,color='black',label='original')
         ax0.set_ylabel('(nT)')
         ax0.set_title(orig_sig_plot_title)
-        # ax0.tick_params(labelbottom=False)
         ax0.grid(True)
 
         two_col_gs = gridspec.GridSpecFromSubplotSpec(ncols=2,nrows=self.n_filters*2+9, 
@@ -327,7 +326,7 @@ class compare_FB:
 
             # Plot Decomposition--------------------------------------------------
             for j,bank in enumerate(fltrbnk['filtered_sigs']):
-                ax2 = fig.add_subplot(two_col_gs[2*j+9:2*j+11,i],sharex=ax1,sharey=ax1)    
+                ax2 = fig.add_subplot(two_col_gs[2*j+9:2*j+11,i],sharex=ax1)    
                 ax2.plot(x,bank)
                 if i ==1:
                     ax2.text(x=min(x),y=max(bank),s=f'center freq = {fb_obj.center_freq[j]:.2e}',
@@ -382,13 +381,6 @@ if __name__ == '__main__':
     
 
     # Test data=========================================================
-    if args['input_file'] is None:
-        year = str(args['start_year'])
-        month = str(args['start_month'])
-        test_cdf_file_path =_SRC_DIR+_OMNI_MAG_DATA_DIR+ year +'/omni_hro_1min_'+ year+month+'01_v01.cdf'
-    else:
-        test_cdf_file_path = args['input_file']
-    
     mag_df = fba.get_test_data(start_date=args['start_date'],
                                end_date=args['stop_date'])
     # mag_df = mag_df-mag_df.mean()
@@ -398,9 +390,9 @@ if __name__ == '__main__':
         # instantiate------------------------------------------------------------------
         comp_anly = compare_FB(data=mag_df[col],
                            cadence=dt.timedelta(seconds=60),
-                           windows=[200,500,800,1000,2000])
+                           windows=[500,1000,2000,4000,8000])
                             # windows=[dt.timedelta(weeks=4*6).seconds,dt.timedelta(365*2).seconds,dt.timedelta(days=365*11).seconds])
-
+                            
         # Overplot reconstruction with original and view residuals--------------------
         # comp_anly.analyze_reconstruction(orig_sig_plot_title=f'[{args["start_year"]}-{args['start_month']}-{args['start_day']}] Original series ({col})',
         #                                  figsize=(8,5.5),
