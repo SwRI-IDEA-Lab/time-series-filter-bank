@@ -32,13 +32,14 @@ def moving_avg_freq_response(f,
 def visualize_filterbank(fb_matrix,
                          fftfreq,
                          xlim:tuple = None,
-                         ylabel = 'Weight'):
+                         ylabel = 'Weight',
+                         freq_xlab_units=''):
     """Simple plot of filterbank"""
     fig,ax = plt.subplots(figsize=(8,3))
     ax.plot(fftfreq,fb_matrix.T)
     ax.grid(True)
     ax.set_ylabel(ylabel=ylabel)
-    ax.set_xlabel('Frequency  (Hz)')
+    ax.set_xlabel('Frequency'+freq_xlab_units)
     if xlim is None:
         xlim = (np.min(fftfreq),np.max(fftfreq))
     ax.set_xlim(xlim)
