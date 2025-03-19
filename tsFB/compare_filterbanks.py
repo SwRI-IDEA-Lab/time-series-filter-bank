@@ -108,6 +108,13 @@ parser.add_argument(
     type=float
 )
 
+def list_of_strings(arg):
+    return arg.split(',')
+
+parser.add_argument('-cols', 
+                    type=list_of_strings,
+                    default=['B_mag','BX_GSE','BY_GSE','BZ_GSE'])
+
 class compare_FB:
     def __init__(self,
                  data,
@@ -382,7 +389,8 @@ if __name__ == '__main__':
 
     # Test data=========================================================
     mag_df = fba.get_test_data(start_date=args['start_date'],
-                               end_date=args['stop_date'])
+                               end_date=args['stop_date'],
+                               cols=args['cols'])
     # mag_df = mag_df-mag_df.mean()
     
     # Visualize application============================================================

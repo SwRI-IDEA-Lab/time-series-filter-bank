@@ -108,12 +108,20 @@ parser.add_argument(
     type=float
 )
 
+def list_of_strings(arg):
+    return arg.split(',')
+
+parser.add_argument('-cols', 
+                    type=list_of_strings,
+                    default=['B_mag','BX_GSE','BY_GSE','BZ_GSE'])
+
 def read_file(
         fname,
         mag_df=None,
         instrument='psp',
         rads_norm=True,
         orbit=None,
+        cols=None
     ):
         """Read in the dataset and format it for input to SAX tree
 
@@ -143,6 +151,11 @@ def read_file(
         # LOG.debug(f'Extracting data from:\n {fname_full_path}')
         
 
+        # TODO: Allow column selection flexibility to other instrument data reading functions (right now only OMNI is able to)
+        if cols is None:
+            if instrument == 'omni':
+                cols = ['F','BX_GSE','BY_GSE','BZ_GSE']
+
         if instrument == 'psp':
             mag_df_new = pm.read_PSP_dataset(
                 fname=fname_full_path,
@@ -156,7 +169,8 @@ def read_file(
             )
         elif instrument == 'omni':
             mag_df_new = pm.read_OMNI_dataset(
-                fname=fname_full_path
+                fname=fname_full_path,
+                cols=cols
             )
         
         mag_df_new['filename'] = [fname]*mag_df_new.shape[0]
@@ -172,7 +186,8 @@ def read_file(
 def get_test_data(instrument = 'omni',
                   start_date = dt.datetime(year=2019,month=5,day=15,hour=0),
                   end_date = dt.datetime(year=2019,month=5,day=16,hour=0),
-                  rads_norm=True):
+                  rads_norm=True,
+                  cols = ['B_mag','BX_GSE','BY_GSE','BZ_GSE']):
     """Retrieve a set of data to test and visualize filterbank application
     
     Parameters
@@ -201,7 +216,7 @@ def get_test_data(instrument = 'omni',
     elif instrument == 'wind':
         catalog_fname = 'wind_master_catalog_2006_2022.csv'
     elif instrument == 'omni':
-        catalog_fname = 'data/omni_master_catalog_1994_2023.csv'
+        catalog_fname = 'data/B_FS_PD/omni_master_catalog_1994_2023.csv'
 
     catalog = pd.read_csv(
             catalog_fname,
@@ -235,11 +250,16 @@ def get_test_data(instrument = 'omni',
         mag_df = read_file(fname = f,
                             mag_df=mag_df,
                             rads_norm=rads_norm,
-                            instrument=instrument)
+                            instrument=instrument,
+                            cols=cols)
     
     mag_df.interpolate(inplace=True)
+    if mag_df.iloc[0].isnull().any():
+        mag_df.bfill(inplace=True)
+    if mag_df.iloc[-1].isnull().any():
+        mag_df.ffill(inplace=True)
     mag_df=mag_df[start_date:end_date]
-    return mag_df[['B_mag','BX_GSE','BY_GSE','BZ_GSE']]
+    return mag_df[cols]
 
 def get_filtered_signals(data,
                          fb_matrix,
@@ -306,6 +326,7 @@ def view_filter_decomposition(data,
                             gs_wspace = 0.2,
                             gs_hspace = 0.0,
                             fb_xlim = None,
+                            sig_xlim = None,
                             center_freq = None,
                             filterbank_plot_title='Filter bank',
                             orig_sig_plot_title='Original Signal',
@@ -376,6 +397,8 @@ def view_filter_decomposition(data,
         ax3.grid(True)
         if i==0:
             ax3.set_title('Signal decomposition',fontsize=15)
+    if sig_xlim is not None:
+        ax3.set_xlim(sig_xlim)
     plt.show()
     
 
@@ -414,7 +437,8 @@ if __name__ == '__main__':
 
     # Test data=========================================================
     mag_df = get_test_data(start_date=args['start_date'],
-                               end_date=args['stop_date'])
+                               end_date=args['stop_date'],
+                               cols=args['cols'])
     # mag_df = mag_df-mag_df.mean()
 
     # variables for 11years
@@ -422,7 +446,7 @@ if __name__ == '__main__':
                                           data_cadence=dt.timedelta(minutes=1))
 
     # frequencies based on windows
-    windows = [dt.timedelta(days=365*0.5),dt.timedelta(days=15)]
+    windows = [dt.timedelta(days=365*0.5)]
     cntr_freq = [fb.time_window_to_npt_freq(w,data_cadence=dt.timedelta(minutes=1)) for w in windows]
     
     # variable for 1 day
@@ -455,6 +479,7 @@ if __name__ == '__main__':
                                   cadence=dt.timedelta(minutes=1),
                                   figsize=(11,8.5),
                                   fb_xlim = (0,fltbnk.edge_freq[-1]),
+                                  sig_xlim=(dt.datetime(year=2010,month=5,day=19),dt.datetime(year=2010,month=6,day=20)),
                                   center_freq = fltbnk.center_freq,
                                   orig_sig_plot_title=f'{title_date_range} Original series ({col})',
                                   plot_reconstruction=False)

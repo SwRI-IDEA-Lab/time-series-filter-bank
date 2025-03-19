@@ -428,7 +428,8 @@ def read_WIND_dataset(fname):
     mag_df = pd.DataFrame(mag_data, index=pd.DatetimeIndex(dates)).sort_index()
     return mag_df 
 
-def read_OMNI_dataset(fname):
+def read_OMNI_dataset(fname,
+                      cols,):
     """Function for reading the OMNI the dataset
     
     Parameters
@@ -447,9 +448,9 @@ def read_OMNI_dataset(fname):
     # Extract mag-field data
     mag_data = {}
 
-    mag_data['B_mag'] = cdf_file['F']   # Mag. Avg. B-vector
-    for i in ['X','Y','Z']:
-        mag_data[f'B{i}_GSE'] = cdf_file[f'B{i}_GSE']
+    for c in cols:
+        mag_data[c] = cdf_file[c]
+    # ==============================================================================
     # Datetime Index
     dates = convert_OMNI_EPOCH(cdf_file)
     mag_df = pd.DataFrame(mag_data,index=pd.DatetimeIndex(dates)).sort_index()
@@ -462,8 +463,21 @@ def read_OMNI_dataset(fname):
     # (probably 'float64') for pd.round() to work
     #------------------------------------------------------------------------------
     mag_df = mag_df.astype('float').round(2)
-    # TODO: (JK) Implement long-term solution to repalce fill values with NaNs respective to each parameter
-    mag_df.replace(to_replace=9999.99,value=np.nan,inplace = True)  # only for IMF data
+   
+    # fill values w.r.t each parameter=============================================
+    # TODO: (JK) Implement long-term solution to repalce fill values with NaNs respective to each parameter 
+    # (so far these are just values of parameters used thus far)
+    fill_values = {'F':9999.99,                 # Avg. Magnetic Field (Magnitude)
+                   'BX_GSE':9999.99,              # BX
+                   'BY_GSE':9999.99,              # BY
+                   'BZ_GSE':9999.99,              # BZ
+                   'flow_speed':99999.9,        # wind speed
+                   'proton_density':999.99}     # 'proton_density
+    
+    for key,value in fill_values.items():
+        if key in cols:
+            mag_df[[key]] = mag_df[[key]].replace(to_replace=value,value=np.nan)
+    # =============================================================================
 
     return mag_df
 

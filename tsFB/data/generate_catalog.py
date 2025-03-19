@@ -24,6 +24,10 @@ logging.basicConfig(format='%(levelname)-4s '
 LOG = logging.getLogger()
 LOG.setLevel(logging.INFO)
 
+def list_of_strings(arg):
+    return arg.split(',')
+
+
 parser = argparse.ArgumentParser()
 parser.add_argument(
     '-start_year',
@@ -109,6 +113,10 @@ parser.add_argument(
     default = [2.15, 1.05, 1.05]    # the three exps are for each respective mgn direction
 )
 
+parser.add_argument('-cols', 
+                    type=list_of_strings,
+                    default=['B_mag','BX_GSE','BY_GSE','BZ_GSE'])
+
 def generate_catalog(
     start_year=None, 
     stop_year=None, 
@@ -122,7 +130,8 @@ def generate_catalog(
     hist_max=None,
     bin_width=None,
     rads_norm=False,
-    exponents_list=None
+    exponents_list=None,
+    cols=None
     ):
     """Generate a catalog of all the data between start_year and stop_year
 
@@ -218,7 +227,7 @@ def generate_catalog(
     # TODO: Finish implementing parallelization
     if parallel:
         delayed_objects = [
-            dask.delayed(analyze_file)(fname=fname, instrument=instrument, orbit=orbit) for fname in flist
+            dask.delayed(analyze_file)(fname=fname, instrument=instrument, orbit=orbit,cols=cols) for fname in flist
         ]
 
         computed_results = dask.compute(*delayed_objects)
@@ -228,7 +237,7 @@ def generate_catalog(
         for n,fname in tqdm(enumerate(flist)):
             data_dict, hist_out = analyze_file(fname, instrument, orbit=orbit, histogram=histogram, 
                                   hist_max=hist_max, bin_width=bin_width, rads_norm=rads_norm, 
-                                  exponents_list=exponents_list)
+                                  exponents_list=exponents_list,cols=cols)
 
             # Add datapoints to cummulative histogram
             if histogram:
@@ -265,7 +274,8 @@ def analyze_file(fname=None,
     hist_max=None,
     bin_width=None,
     rads_norm=False,
-    exponents_list=None
+    exponents_list=None,
+    cols = None
     ):
     """Convenience function to handle all the steps
 
@@ -336,13 +346,15 @@ def analyze_file(fname=None,
         cols = ['B_mag', 'BRTN_0', 'BRTN_1', 'BRTN_2']
     
     elif instrument == 'omni':
+        if cols is None:
+            cols = ['F','BX_GSE','BY_GSE','BZ_GSE']
         try:
-            mag_df = pm.read_OMNI_dataset(fname)
+            mag_df = pm.read_OMNI_dataset(fname,cols=cols)
         except Exception as e:
             msg = f"{e}\n Script crashed at file: {fname}"
             LOG.error(msg)
             return {}, np.array([np.nan])
-        cols = ['B_mag','BX_GSE','BY_GSE','BZ_GSE']
+        
 
     # Calculate histogram
     if histogram:

@@ -6,17 +6,17 @@
   "configurations": [
     {
       "name": "Python Debugger: Python File",
-      "type": "python",
+      "type": "debugpy",
       "request": "launch",
       "console": "integratedTerminal",
       "module": "${command:extension.commandvariable.file.relativeFileDotsNoExtension}",
       "cwd": "${workspaceFolder}",
       "justMyCode": false,
-      "interpreterPath":"$/home/jkobayashi/anaconda3/envs/idea-isax-sw/bin/python"
+      // "interpreterPath":"$/home/jkobayashi/anaconda3/envs/idea-isax-sw/bin/python"
     },
     {
       "name": "iSAX generate catalog",
-      "type": "python",
+      "type": "debugpy",
       "request": "launch",
       "console": "integratedTerminal",
       "module": "${command:extension.commandvariable.file.relativeFileDotsNoExtension}",
@@ -26,28 +26,46 @@
         "-start_year", "1994",
         "-stop_year", "2023",
         "-instrument", "omni",
-        "-data_path", "/home/jkobayashi/gh_repos/time-series-filter-bank/sw-data/nasaomnireader/",
+        "-data_path", "/home/jkobayashi/gh_repos/time-series-filter-bank/sw-data/nasaomnireader",
         // "-debug", "10"
-        "-histogram"
+        // "-histogram",
+        "-cols","F,flow_speed,proton_density"
       ]
     },
     {
-      "name": "test analysis",
-      "type": "python",
+      "name": "1day test analysis",
+      "type": "debugpy",
       "request": "launch",
       "console": "integratedTerminal",
       "module": "${command:extension.commandvariable.file.relativeFileDotsNoExtension}",
       "cwd": "${workspaceFolder}",
       "justMyCode": false,
       "args": [
-        "-start_year", "2000",
-        "-start_month","01",
-        "-start_day","01",
-        // "-stop_date","2020-01-01",
-        "-chunk_size","315360000",
+        "-start_year", "1995",
+        "-start_month","08",
+        "-start_day","04",
         "-cadence", "60",
         "-absolute_residual",
-        "-residual_epsilon","0.01"
+        "-residual_epsilon","0.01",
+        "-cols","F,flow_speed"
+      ]
+    },
+    {
+      "name": "10 yr test analysis",
+      "type": "debugpy",
+      "request": "launch",
+      "console": "integratedTerminal",
+      "module": "${command:extension.commandvariable.file.relativeFileDotsNoExtension}",
+      "cwd": "${workspaceFolder}",
+      "justMyCode": false,
+      "args": [
+        "-start_date", "2008-01-01",
+        "-stop_date","2021-01-01",
+        // "-chunk_size","315360000",
+        "-cadence", "60",
+        "-absolute_residual",
+        "-residual_epsilon","0.01",
+        "-cols","F,flow_speed"
       ]
     },
   ]
