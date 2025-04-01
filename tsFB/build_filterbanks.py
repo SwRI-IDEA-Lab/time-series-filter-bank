@@ -59,7 +59,7 @@ class filterbank:
                  restore_from_file:str = None):
         self.data_len = data_len
         self.cadence = cadence
-        # frequency spectrum (based on data length)
+        # frequency spectrum (based on data length)----------------------------------------
         freq_sample_num = np.linspace(0.0,data_len/2,(data_len//2)+1)
         freq_sample_rate = freq_sample_num/data_len
         freq_natural = freq_sample_rate*2*np.pi
@@ -74,7 +74,7 @@ class filterbank:
                               'hertz':freq_hz
                               }
 
-        # placeholders
+        # placeholders---------------------------------------------------------------------
         self.fb_matrix = None
         self.edge_freq = None
         self.center_freq_idx = []
@@ -91,9 +91,15 @@ class filterbank:
         #     self.DC = fb_dict['DC']
         #     self.HF = fb_dict['HF']
 
-    def update_center_freq_idx(self):
+    def update_center_freq_idx(self,
+                               freq_units = 'hertz'):
+        spect = self.freq_spectrum[freq_units]
         current_lst = self.center_freq_idx
-        update_lst = np.where(np.isin(self.freq_spectrum['hertz'],self.center_freq))
+        # update_lst = np.where(np.isin(self.freq_spectrum[freq_units],self.center_freq))
+        update_lst = []
+        for k in self.center_freq:
+            update_lst.append(np.argmin(np.abs(spect-k)))
+
         if not np.array_equiv(current_lst,update_lst):
             self.center_freq_idx = update_lst
 
@@ -161,7 +167,110 @@ class filterbank:
         self.center_freq = center_freq
         self.lower_edges = lower_edges
 
-        self.update_center_freq_idx()
+        self.update_center_freq_idx(freq_units=freq_units)
+
+    def build_trapezoid_fb(self,
+                          filter_freq_range = (0.05,0.45),
+                          center_freq = [(0.1,0.2),(0.3,0.4)], 
+                          edge_freq = [0.05,0.1,0.2,0.3,0.4,0.45],
+                          freq_units='sample_rate_frac'):
+        """Creates filterbank matrix of trapezoidal filters.
+        
+        There are two ways to build the filter banks, either: 
+            
+            Provide both `filter_freq_range` (tuple) and `center_freq` (list of tuples), which indicates the range of frequencies
+            the filters occupy and the list of tuples indicate the range for flat plateaus of each filter. 
+
+            (This is a bit more deliberate approach, where the user knows which frequency ranges to use for each individual filter 
+            and may specifically want to adjust the cut-offs of the DC & HF filters)
+            
+            OR
+            
+            (Enter `None` for `filter_freq_range` and `center_freq` to utilize this method)
+
+            Provide comprehensive `edge_freq` list, which includes all edge points of interest.
+            If there are values entered in `filter_freq_range` and `center_freq` then anything passed in this `edge_freq` argument will be overwritten.
+
+            (This is a more relaxed method to supply the entire list of frequencies of interest, without worrying about which are the trapezoid filters, etc.)
+            
+        ---------- 
+        filter_freq_range : tuple
+            (min_freq,max_freq)
+            Minimum and maximum frequencies (in hz) that define the range in which the filters occupy.
+            min_freq will be the first edge, and max_freq will be the last edge
+        
+
+        center_freq : list of tuples
+            Specified center frequencies of triangle filterbanks.
+            If none or empty array, center_freq of the filterbank will be evenly spaced out using num_bands. 
+
+        edge_freq : list
+            comprehensive list of all relevant edges at their associated frequency, including the starting and last edges
+           
+        """
+
+        if center_freq is None or len(center_freq) == 0:                # if center_freq is None, use provided edge_freq
+            assert edge_freq is not None or len(edge_freq) == 0, "Either center_freq or edge_freq need to be provided, both cannot be None or empty."
+            assert len(edge_freq)>=4 and len(edge_freq) % 2 ==0, "Even number of elements in edge_freq  is required (4 numbers minimum)"
+            # TODO: (SWE good practice) add log message of using edge_freq list, and maybe even what the center frequencies are
+            
+            edge_freq.sort()
+
+            freq_min = min(edge_freq)
+            freq_max = max(edge_freq)
+            filter_freq_range = (freq_min,freq_max)
+
+            
+        else: #(i.e. center frequencies are provided)
+            # TODO: (SWE good practice) log message indicating list of center_freq is being used and that even if edge_freq is provided it will be overwritten
+            freq_min, freq_max = filter_freq_range
+
+            # TODO: (Current state: assuming perfect user that knows how to correctly provide list) Update to safeguard from improper provided center_freq list
+            edge_freq = [freq_min]  # comprehensive list of edges
+            cl_edges = []           # list of lower centers
+            cu_edges = []           # list of upper centers
+            for cntrs in center_freq:
+                edge_freq.append(min(cntrs))
+                cl_edges.append(min(cntrs))
+
+                edge_freq.append(max(cntrs))
+                cu_edges.append(max(cntrs))
+
+            edge_freq.append(freq_max)
+
+        num_bands = int((len(edge_freq)-2)/2)
+
+        # Build trapezoidal filters
+        lower_edges = edge_freq[:-2:2]
+        upper_edges = edge_freq[3::2]
+
+        freqs = self.freq_spectrum[freq_units]
+        fltrmat = zeros((num_bands, len(freqs)))
+
+        for iband, (lower, l_cntr, u_cntr, upper) in enumerate(zip(
+                    lower_edges, cl_edges, cu_edges, upper_edges)):
+
+            left_slope = (freqs >= lower)  == (freqs <= l_cntr)
+            fltrmat[iband, left_slope] = (
+                (freqs[left_slope] - lower) / (l_cntr - lower)
+            )
+
+            flat_slope = (freqs >= l_cntr) == (freqs <= u_cntr)
+            fltrmat[iband, flat_slope] = 1 
+
+            right_slope = (freqs >= u_cntr) == (freqs <= upper)
+            fltrmat[iband, right_slope] = (
+                (upper - freqs[right_slope]) / (upper - u_cntr)
+            )
+        self.fb_matrix = fltrmat 
+        self.edge_freq = np.array(edge_freq)
+        self.upper_edges = upper_edges
+        self.cu_edges = cu_edges
+        self.cl_edges = cl_edges
+        self.center_freq = center_freq
+        self.lower_edges = lower_edges
+
+        # self.update_center_freq_idx(freq_units=freq_units)
 
     def build_DTSM_fb(self,
                       windows = []):
