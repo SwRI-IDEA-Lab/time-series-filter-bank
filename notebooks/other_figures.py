@@ -34,8 +34,9 @@ end_dt = dt.datetime.strptime(f'{year}-{month}-{format(int(day)+1,'02')}','%Y-%m
 
 os.chdir('/home/jkobayashi/gh_repos/time-series-filter-bank/')
 mag_df = fa.get_test_data(start_date=start_dt,
-                          end_date=end_dt)
-mag_df=mag_df['BX_GSE']
+                          end_date=end_dt,
+                          cols=['F'])
+mag_df=mag_df['F']
 
 # %% Prepare FT of test data for Fourier applications
 cadence = dt.timedelta(seconds=60)
@@ -210,7 +211,8 @@ axes.legend()
 # %%
 # preview/testing of >1 day frequency response
 mag_df1 = fa.get_test_data(start_date=dt.datetime(2000,1,1),
-                           end_date=dt.datetime(2011,1,1))
+                           end_date=dt.datetime(2011,1,1),
+                           cols=['F'])
 data_len1 = mag_df1.shape[0]  
 freq_spectrum1= np.linspace(0.0,1/2,(data_len1//2)+1)
 SM_test2 = fb.moving_avg_freq_response(f=freq_spectrum1,
