@@ -60,7 +60,7 @@ class filterbank:
         self.data_len = data_len
         self.cadence = cadence
         # frequency spectrum (based on data length)----------------------------------------
-        freq_sample_num = np.linspace(0.0,data_len/2,(data_len//2)+1)
+        freq_sample_num = np.linspace(0.0,data_len//2,(data_len//2)+1).astype(np.int64)
         freq_sample_rate = freq_sample_num/data_len
         freq_natural = freq_sample_rate*2*np.pi
         if cadence is not None:
