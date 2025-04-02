@@ -75,6 +75,7 @@ class filterbank:
                               }
 
         # placeholders---------------------------------------------------------------------
+        self.fb_type = None
         self.fb_matrix = None
         self.edge_freq = None
         self.center_freq_idx = []
@@ -82,6 +83,7 @@ class filterbank:
         self.DC = False
         self.HF = False
 
+        # TODO: fix "restore_from_file"
         # if restore_from_file is not None:
         #     pkl = open(restore_from_file,'rb')
         #     fb_dict = pickle.load(pkl)
@@ -128,6 +130,7 @@ class filterbank:
             Specified center frequencies of triangle filterbanks.
             If none or empty array, center_freq of the filterbank will be evenly spaced out using num_bands. 
         """
+        self.fb_type = 'triangle'
         freq_min, freq_max = filter_freq_range
 
         # if center frequencies not specified, centers are evenly spaced out given the freq range
@@ -186,7 +189,7 @@ class filterbank:
             
             OR
             
-            (Enter `None` for `filter_freq_range` and `center_freq` to utilize this method)
+            (Enter `None` for both `filter_freq_range` and `center_freq` to utilize this method)
 
             Provide comprehensive `edge_freq` list, which includes all edge points of interest.
             If there are values entered in `filter_freq_range` and `center_freq` then anything passed in this `edge_freq` argument will be overwritten.
@@ -208,7 +211,9 @@ class filterbank:
             comprehensive list of all relevant edges at their associated frequency, including the starting and last edges
            
         """
+        self.fb_type = 'trapezoid'
 
+        # TODO: Add flexibility to just provide num_bands and filter_freq_range and automatically create evenly spaced filters (like in triangle filter bank function)
         if center_freq is None or len(center_freq) == 0:                # if center_freq is None, use provided edge_freq
             assert edge_freq is not None or len(edge_freq) == 0, "Either center_freq or edge_freq need to be provided, both cannot be None or empty."
             assert len(edge_freq)>=4 and len(edge_freq) % 2 ==0, "Even number of elements in edge_freq  is required (4 numbers minimum)"
@@ -274,6 +279,7 @@ class filterbank:
 
     def build_DTSM_fb(self,
                       windows = []):
+        self.fb_type = 'moving_average'
         fb_matrix = zeros((len(windows)-1,self.data_len//2+1))
         center_freq = []
         windows.sort(reverse=True)
@@ -306,10 +312,11 @@ class filterbank:
             
             self.DC=True
             # update edge frequency lists
-            if self.center_freq[0] != self.edge_freq[0]:
-                self.center_freq = np.insert(self.center_freq,0,self.edge_freq[0])
-            if self.upper_edges[0] != self.edge_freq[1]:
-                self.upper_edges = np.insert(self.upper_edges,0,self.edge_freq[1])
+            if self.fb_type == 'triangle':
+                if self.center_freq[0] != self.edge_freq[0]:
+                    self.center_freq = np.insert(self.center_freq,0,self.edge_freq[0])
+                if self.upper_edges[0] != self.edge_freq[1]:
+                    self.upper_edges = np.insert(self.upper_edges,0,self.edge_freq[1])
         # HF
         if HF and not self.HF:
             # update fb_matrix
@@ -320,11 +327,13 @@ class filterbank:
 
             self.HF=True
             # update edge frequency lists
-            if self.center_freq[-1] != self.edge_freq[-1]:
-                self.center_freq = np.append(self.center_freq,self.edge_freq[-1])
-            if self.lower_edges[-1] != self.edge_freq[-2]:
-                self.lower_edges = np.append(self.lower_edges,self.edge_freq[-2])
-        self.update_center_freq_idx()
+            if self.fb_type == 'triangle':
+                if self.center_freq[-1] != self.edge_freq[-1]:
+                    self.center_freq = np.append(self.center_freq,self.edge_freq[-1])
+                if self.lower_edges[-1] != self.edge_freq[-2]:
+                    self.lower_edges = np.append(self.lower_edges,self.edge_freq[-2])
+        if self.fb_type == 'triangle':
+            self.update_center_freq_idx()
 
     def add_mvgavg_DC_HF(self,
                          DC = True,
@@ -368,10 +377,11 @@ class filterbank:
             #     self.center_freq = np.insert(self.center_freq,0,cnt_fq)
         self.update_center_freq_idx()
 
-    def visualize_filterbank(self):
+    def visualize_filterbank(self,
+                             freq_units = 'hertz'):
         """Show a plot of the built filterbank."""
         visualize_filterbank(fb_matrix=self.fb_matrix,
-                             fftfreq=self.freq_spectrum['hertz'],)
+                             fftfreq=self.freq_spectrum[freq_units],)
                             #  xlim=(self.edge_freq[0],self.edge_freq[-1]))
 
     # TODO: Update and fix filterbank saving with new updates (changed attributes, moving average FB, etc.)
