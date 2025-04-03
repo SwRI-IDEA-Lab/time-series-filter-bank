@@ -388,7 +388,8 @@ def view_filter_decomposition(data,
     for i,bank in enumerate(filtered_df):
         ax3 = fig.add_subplot(gs[last_gs+2*i:last_gs+2*i+2],sharex=ax0)    
         ax3.plot(x,bank)
-        ax3.text(x=min(x),y=max(bank),s=f'center freq = {center_freq[i]:.2e}',
+        if center_freq is not None:
+            ax3.text(x=min(x),y=max(bank),s=f'center freq = {center_freq[i]:.2e}',
                  ha='left',va='top',
                  fontsize=8,
                  bbox=dict(facecolor='white', edgecolor='black',alpha=0.7))
