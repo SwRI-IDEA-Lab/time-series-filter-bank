@@ -131,7 +131,7 @@ class filterbank:
             If none or empty array, center_freq of the filterbank will be evenly spaced out using num_bands. 
         """
         self.fb_type = 'triangle'
-        freq_min, freq_max = filter_freq_range
+        freq_min, freq_max = filter_freq_range # (trusting user to input correctly)
 
         # if center frequencies not specified, centers are evenly spaced out given the freq range
         if center_freq is None or len(center_freq) == 0:
@@ -225,6 +225,11 @@ class filterbank:
             freq_max = max(edge_freq)
             filter_freq_range = (freq_min,freq_max)
 
+            cl_edges = edge_freq[1:-1:2]
+            cu_edges = edge_freq[2:-1:2]
+            center_freq = []
+            for i,l in enumerate(cl_edges):
+                center_freq.append((l,cu_edges[i]))
             
         else: #(i.e. center frequencies are provided)
             # TODO: (SWE good practice) log message indicating list of center_freq is being used and that even if edge_freq is provided it will be overwritten
