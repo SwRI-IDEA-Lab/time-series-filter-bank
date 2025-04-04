@@ -329,6 +329,9 @@ def view_filter_decomposition(data,
                             sig_xlim = None,
                             center_freq = None,
                             filterbank_plot_title='Filter bank',
+                            fb_freq_units = '',
+                            fb_log_freq = False,
+                            fb_plot_sci_not = True,
                             orig_sig_plot_title='Original Signal',
                             plot_reconstruction=False,
                             ):
@@ -359,17 +362,22 @@ def view_filter_decomposition(data,
     ax0.grid(True)
 
     # Filterbank plot
-    if fb_xlim is None:
-        fb_xlim = (fftfreq[0],fftfreq[-1])
+    if fb_xlim is not None:
+        ax1.set_xlim(fb_xlim)
     ax1 = fig.add_subplot(gs[3:4])  
     ax1.plot(fftfreq, fb_matrix.T)
     ax1.grid(True)
-    ax1.set_xlabel('Frequency')
-    ax1.set_xlim(fb_xlim)
+    if fb_log_freq:
+        ax1.set_xscale('log')
+        fb_freq_units += ' [log scaled]'
+    ax1.set_xlabel('Frequency'+fb_freq_units)
+    
     ax1.set_title(filterbank_plot_title)
     # ax1.set_xticks(center_freq)
     ax1.tick_params(rotation=35,labelsize=8,axis='x')
-    ax1.ticklabel_format(style='sci',scilimits=(0,0),axis='x')
+    if fb_plot_sci_not:
+        ax1.ticklabel_format(style='sci',scilimits=(0,0),axis='x')
+    
 
     # Reconstruction (on top of original)
     if plot_reconstruction:
