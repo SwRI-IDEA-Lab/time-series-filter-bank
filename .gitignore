@@ -169,3 +169,4 @@ wandb/
 runs/
 
 *.pkl
+*.fits
