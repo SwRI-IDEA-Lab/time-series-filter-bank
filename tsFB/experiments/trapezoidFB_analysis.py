@@ -16,6 +16,8 @@ from mpl_toolkits.mplot3d import Axes3D
 from scipy import fft
 import random as rnd
 
+from astropy.io import fits
+
 import datetime as dt
 import os,sys
 
@@ -30,6 +32,8 @@ import tsFB.utils.time_chunking as tc
 import tsFB.build_filterbanks as fb
 import tsFB.data.helper_funcs as hf
 import tsFB.filterbank_analysis as fa
+import tsFB.visualization.visualization as fb_vis
+import tsFB.utils.CR_dates as crdt
 
 # Data paths
 _PSP_MAG_DATA_DIR = '/sw-data/psp/mag_rtn/'
@@ -184,17 +188,28 @@ if __name__ == '__main__':
     #                      fftfreq=fltbnk.freq_spectrum['sample_rate_frac'],
     #                     #  xlim=(fltbnk.edge_freq[0],fltbnk.edge_freq[-1]),
     #                      ylabel='Amplitude',)
+
+    # synoptic map data
+    hdu_list = fits.open('/home/jkobayashi/gh_repos/time-series-filter-bank/data/FITS/IDSEAR_AIAsyn/aia193_synmap_cr2098.fits')
+    image_data = hdu_list[0].data
     
+    CR_dates = crdt.create_CR_date_dictionary('/home/jkobayashi/gh_repos/time-series-filter-bank/data/CR_Table.rdb.txt')
+    cr_start,cr_end = crdt.get_start_end_dates(CR_dates=CR_dates,
+                                     carr_rot_num='2098')
+
     # Visualize application
     title_date_range = f'[{args["start_date"].year}-{format(args['start_date'].month,'02')}-{format(args['start_date'].day,'02')} to {args["stop_date"].year}-{format(args['stop_date'].month,'02')}-{format(args['stop_date'].day,'02')}]'
     for col in mag_df.columns:
-        fa.view_filter_decomposition(data=mag_df[col],
+        fb_vis.filter_decomposition_with_synoptic(data=mag_df[col],
                                   fb_matrix=fltbnk.fb_matrix,
                                   fftfreq=fltbnk.freq_spectrum['sample_rate_frac'],
+                                  syn_map_data=image_data,
                                   cadence=dt.timedelta(minutes=1),
-                                  figsize=(11,8.5),
-                                  fb_xlim = (0,fltbnk.edge_freq[-1]),
-                                  sig_xlim=(dt.datetime(year=2010,month=5,day=19),dt.datetime(year=2010,month=6,day=20)),
+                                  figsize=(8.5,10),
+                                #   fb_xlim = (0,fltbnk.edge_freq[-1]),
+                                  sig_xlim=(cr_start,cr_end),
                                   center_freq = None,
-                                  orig_sig_plot_title=f'{title_date_range} Original series ({col})',
-                                  plot_reconstruction=False)
+                                #   orig_sig_plot_title=f'{title_date_range} Original series ({col})',
+                                  plot_reconstruction=False,
+                                  fb_log_freq=True,
+                                  fb_plot_sci_not=False)
