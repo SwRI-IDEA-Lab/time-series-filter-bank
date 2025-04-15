@@ -36,6 +36,7 @@ def filter_decomposition(data,
                         sig_xlim = None,
                         center_freq = None,
                         filterbank_plot_title='Filter bank',
+                        add_to_sig_title='',
                         fb_freq_units = '',
                         fb_log_freq = False,
                         fb_plot_sci_not = True,
@@ -51,9 +52,9 @@ def filter_decomposition(data,
     """
     x = data.index
 
-    orig_sig_plot_title = f'Original Series [{x[0].strftime('%Y-%m-%d')} to {x[-1].strftime('%Y-%m-%d')}]'
+    orig_sig_plot_title = f'Original Series [{x[0].strftime('%Y-%m-%d')} to {x[-1].strftime('%Y-%m-%d')}] '+add_to_sig_title
     if sig_xlim is not None:
-        orig_sig_plot_title = f'Original Series [{sig_xlim[0].strftime('%Y-%m-%d')} to {sig_xlim[-1].strftime('%Y-%m-%d')}]'
+        orig_sig_plot_title = f'Original Series [{sig_xlim[0].strftime('%Y-%m-%d')} to {sig_xlim[-1].strftime('%Y-%m-%d')}] '+add_to_sig_title
 
     # Gridspec setup
     gs_recon = 3 if plot_reconstruction else 0
@@ -116,7 +117,7 @@ def filter_decomposition(data,
             ax3.tick_params(labelbottom=False)
         ax3.grid(True)
         if i==0:
-            ax3.set_title('Signal decomposition',fontsize=15)
+            ax3.set_title('Signal decomposition '+add_to_sig_title,fontsize=15)
     if sig_xlim is not None:
         ax3.set_xlim(sig_xlim)
 
@@ -147,6 +148,7 @@ def filter_decomposition_2params(data,
                                 y_label2 = None,
                                 center_freq = None,
                                 filterbank_plot_title='Filter bank',
+                                add_to_sig_title='',
                                 fb_freq_units = '',
                                 fb_log_freq = False,
                                 fb_plot_sci_not = True,
@@ -164,9 +166,9 @@ def filter_decomposition_2params(data,
     x = data.index
     y = data
 
-    orig_sig_plot_title = f'Original Series [{x[0].strftime('%Y-%m-%d')} to {x[-1].strftime('%Y-%m-%d')}]'
+    orig_sig_plot_title = f'Original Series [{x[0].strftime('%Y-%m-%d')} to {x[-1].strftime('%Y-%m-%d')}] '+add_to_sig_title
     if sig_xlim is not None:
-        orig_sig_plot_title = f'Original Series [{sig_xlim[0].strftime('%Y-%m-%d')} to {sig_xlim[-1].strftime('%Y-%m-%d')}]'
+        orig_sig_plot_title = f'Original Series [{sig_xlim[0].strftime('%Y-%m-%d')} to {sig_xlim[-1].strftime('%Y-%m-%d')}] '+add_to_sig_title
 
     # Gridspec setup
     gs_recon = 3 if plot_reconstruction else 0
@@ -271,7 +273,7 @@ def filter_decomposition_2params(data,
         
         ax3.grid(True)
         if i==0:
-            ax3.set_title('Signal decomposition',fontsize=15)
+            ax3.set_title('Signal decomposition '+add_to_sig_title,fontsize=15)
     if sig_xlim is not None:
         ax3.set_xlim(sig_xlim)
 
