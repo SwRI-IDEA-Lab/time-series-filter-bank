@@ -304,3 +304,37 @@ fb.visualize_filterbank(fb_matrix=fltbnk.fb_matrix,
                         fftfreq=fltbnk.freq_spectrum['sample_rate_frac'],
                     #  xlim=(fltbnk.edge_freq[0],fltbnk.edge_freq[-1]),
                         ylabel='Amplitude',)
+
+# %%
+ # Build Filterbank (5 relatively evenly spaced filters)
+fltbnk = fb.filterbank(data_len=len(mag_df),
+                        cadence=dt.timedelta(seconds=60))
+fltbnk.build_trapezoid_fb(filter_freq_range = (0.05,0.4),
+                          center_freq = [(0.1,0.15),(0.2,0.25),(0.3,0.35)],
+                          freq_units='sample_rate_frac')
+fb.visualize_filterbank(fb_matrix=fltbnk.fb_matrix,
+                        fftfreq=fltbnk.freq_spectrum['sample_rate_frac'],
+                        xlim=(fltbnk.edge_freq[0],fltbnk.edge_freq[-1]),
+                        ylabel='Amplitude')
+fltbnk.add_DC_HF_filters()
+fb.visualize_filterbank(fb_matrix=fltbnk.fb_matrix,
+                        fftfreq=fltbnk.freq_spectrum['sample_rate_frac'],
+                    #  xlim=(fltbnk.edge_freq[0],fltbnk.edge_freq[-1]),
+                        ylabel='Amplitude',)
+# %%
+ # Build Filterbank (similar to case study example; but not to scale)
+fltbnk = fb.filterbank(data_len=len(mag_df),
+                        cadence=dt.timedelta(seconds=60))
+fltbnk.build_trapezoid_fb(filter_freq_range = (0.05,0.3),
+                          center_freq = [(0.1,0.25)],
+                          freq_units='sample_rate_frac')
+fb.visualize_filterbank(fb_matrix=fltbnk.fb_matrix,
+                        fftfreq=fltbnk.freq_spectrum['sample_rate_frac'],
+                        xlim=(fltbnk.edge_freq[0],fltbnk.edge_freq[-1]),
+                        ylabel='Amplitude')
+fltbnk.add_DC_HF_filters()
+fb.visualize_filterbank(fb_matrix=fltbnk.fb_matrix,
+                        fftfreq=fltbnk.freq_spectrum['sample_rate_frac'],
+                    #  xlim=(fltbnk.edge_freq[0],fltbnk.edge_freq[-1]),
+                        ylabel='Amplitude',)
+# %%
