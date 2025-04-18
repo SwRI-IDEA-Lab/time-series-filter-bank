@@ -199,19 +199,19 @@ if __name__ == '__main__':
                                      carr_rot_num=cr_num)
 
     # Visualize application
-    for col in mag_df.columns:
-        fb_vis.filter_decomposition(data=mag_df[col],
-                                  fb_matrix=fltbnk.fb_matrix,
-                                  fftfreq=fltbnk.freq_spectrum['sample_rate_frac'],
-                                #   syn_map_data=image_data,
-                                  cadence=dt.timedelta(minutes=1),
-                                  figsize=(10,10),
-                                #   fb_xlim = (0,fltbnk.edge_freq[-1]),
-                                #   sig_xlim=(cr_start,cr_end),
-                                  center_freq = None,
-                                  plot_reconstruction=False,
-                                  fb_log_freq=True,
-                                  fb_plot_sci_not=False)
+    # for col in mag_df.columns:
+    #     fb_vis.filter_decomposition(data=mag_df[col],
+    #                               fb_matrix=fltbnk.fb_matrix,
+    #                               fftfreq=fltbnk.freq_spectrum['sample_rate_frac'],
+    #                             #   syn_map_data=image_data,
+    #                               cadence=dt.timedelta(minutes=1),
+    #                               figsize=(10,10),
+    #                             #   fb_xlim = (0,fltbnk.edge_freq[-1]),
+    #                             #   sig_xlim=(cr_start,cr_end),
+    #                               center_freq = None,
+    #                               plot_reconstruction=False,
+    #                               fb_log_freq=True,
+    #                               fb_plot_sci_not=False)
 
     fb_vis.filter_decomposition_2params(data=mag_df,
                                   fb_matrix=fltbnk.fb_matrix,
@@ -234,6 +234,7 @@ if __name__ == '__main__':
                                   syn_map_data=image_data,
                                   cadence=dt.timedelta(minutes=1),
                                   figsize=(8.5,10),
+                                  plot_filterbank=False,
                                 #   fb_xlim = (0,fltbnk.edge_freq[-1]),
                                   sig_xlim=(cr_start,cr_end),
                                   y_label1='Avg. Mag Field (nT)',

@@ -32,6 +32,7 @@ def filter_decomposition(data,
                         figsize=(4,11),
                         gs_wspace = 0.2,
                         gs_hspace = 0.0,
+                        plot_filterbank = True,
                         fb_xlim = None,
                         sig_xlim = None,
                         center_freq = None,
@@ -52,17 +53,20 @@ def filter_decomposition(data,
     """
     x = data.index
 
-    orig_sig_plot_title = f'Original Series [{x[0].strftime('%Y-%m-%d')} to {x[-1].strftime('%Y-%m-%d')}] '+add_to_sig_title
+    orig_sig_plot_title = f'Original Signal [{x[0].strftime('%Y-%m-%d')} to {x[-1].strftime('%Y-%m-%d')}] '+add_to_sig_title
     if sig_xlim is not None:
-        orig_sig_plot_title = f'Original Series [{sig_xlim[0].strftime('%Y-%m-%d')} to {sig_xlim[-1].strftime('%Y-%m-%d')}] '+add_to_sig_title
+        orig_sig_plot_title = f'Original Signal [{sig_xlim[0].strftime('%Y-%m-%d')} to {sig_xlim[-1].strftime('%Y-%m-%d')}] '+add_to_sig_title
 
     # Gridspec setup
+    gs_fb = 3 if plot_filterbank else 0
     gs_recon = 3 if plot_reconstruction else 0
     gs_syn = 5 if syn_map_data is not None else 0
 
+    total_gs_rows = 3+gs_fb+gs_recon+fb_matrix.shape[0]*2+gs_syn    # original series + filterbank plot + reconstruction plot (if applicable) + decomposition
+
     fig = plt.figure(figsize=figsize)
     gs = gridspec.GridSpec(ncols = 1, 
-                           nrows = 3+3+gs_recon+fb_matrix.shape[0]*2+gs_syn, # original series + filterbank plot + reconstruction plot (if applicable) + decomposition
+                           nrows = total_gs_rows, 
                            figure = fig,
                            wspace=gs_wspace, 
                            hspace=gs_hspace)
@@ -75,21 +79,27 @@ def filter_decomposition(data,
     ax0.grid(True)
 
     # Filterbank plot
-    if fb_xlim is not None:
-        ax1.set_xlim(fb_xlim)
-    ax1 = fig.add_subplot(gs[3:4])  
-    ax1.plot(fftfreq, fb_matrix.T)
-    ax1.grid(True)
-    if fb_log_freq:
-        ax1.set_xscale('log')
-        fb_freq_units += ' [log scaled]'
-    ax1.set_xlabel('Frequency'+fb_freq_units)
-    
-    ax1.set_title(filterbank_plot_title)
-    # ax1.set_xticks(center_freq)
-    if fb_plot_sci_not:
-        ax1.ticklabel_format(style='sci',scilimits=(0,0),axis='x')
-        ax1.tick_params(rotation=35,labelsize=8,axis='x')
+    if plot_filterbank:
+        if fb_xlim is not None:
+            ax1.set_xlim(fb_xlim)
+        ax1 = fig.add_subplot(gs[3:4])  
+        ax1.plot(fftfreq, fb_matrix.T)
+        ax1.grid(True)
+        if fb_log_freq:
+            ax1.set_xscale('log')
+            fb_freq_units += ' [log scaled]'
+        ax1.set_xlabel('Frequency'+fb_freq_units)
+            
+        ax1.set_title(filterbank_plot_title)
+        if fb_plot_sci_not:
+            ax1.ticklabel_format(style='sci',scilimits=(0,0),axis='x')
+            ax1.tick_params(rotation=35,labelsize=8,axis='x')
+
+    # get filtered signals
+    filtered_df = fa.get_filtered_signals(data=data,
+                                       fb_matrix=fb_matrix,
+                                       fftfreq=fftfreq,
+                                       cadence=cadence)
 
     # Reconstruction (on top of original)
     if plot_reconstruction:
@@ -101,10 +111,7 @@ def filter_decomposition(data,
         last_gs = 6
     
     # Filtered Signal Decomposition
-    filtered_df = fa.get_filtered_signals(data=data,
-                                       fb_matrix=fb_matrix,
-                                       fftfreq=fftfreq,
-                                       cadence=cadence)
+    
     for i,bank in enumerate(filtered_df):
         ax3 = fig.add_subplot(gs[last_gs+2*i:last_gs+2*i+2],sharex=ax0)    
         ax3.plot(x,bank)
@@ -142,6 +149,7 @@ def filter_decomposition_2params(data,
                                 figsize=(4,11),
                                 gs_wspace = 0.2,
                                 gs_hspace = 0.0,
+                                plot_filterbank = True,
                                 fb_xlim = None,
                                 sig_xlim = None,
                                 y_label1 = None,
@@ -166,17 +174,20 @@ def filter_decomposition_2params(data,
     x = data.index
     y = data
 
-    orig_sig_plot_title = f'Original Series [{x[0].strftime('%Y-%m-%d')} to {x[-1].strftime('%Y-%m-%d')}] '+add_to_sig_title
+    orig_sig_plot_title = f'Original Signal [{x[0].strftime('%Y-%m-%d')} to {x[-1].strftime('%Y-%m-%d')}] '+add_to_sig_title
     if sig_xlim is not None:
-        orig_sig_plot_title = f'Original Series [{sig_xlim[0].strftime('%Y-%m-%d')} to {sig_xlim[-1].strftime('%Y-%m-%d')}] '+add_to_sig_title
+        orig_sig_plot_title = f'Original Signal [{sig_xlim[0].strftime('%Y-%m-%d')} to {sig_xlim[-1].strftime('%Y-%m-%d')}] '+add_to_sig_title
 
     # Gridspec setup
+    gs_fb = 3 if plot_filterbank else 0
     gs_recon = 3 if plot_reconstruction else 0
     gs_syn = 5 if syn_map_data is not None else 0
 
+    total_gs_rows = 3+gs_fb+gs_recon+fb_matrix.shape[0]*2+gs_syn    # original series + filterbank plot + reconstruction plot (if applicable) + decomposition
+
     fig = plt.figure(figsize=figsize)
     gs = gridspec.GridSpec(ncols = 1, 
-                           nrows = 3+3+gs_recon+fb_matrix.shape[0]*2+gs_syn, # original series + filterbank plot + reconstruction plot (if applicable) + decomposition
+                           nrows = total_gs_rows, 
                            figure = fig,
                            wspace=gs_wspace, 
                            hspace=gs_hspace)
@@ -205,22 +216,26 @@ def filter_decomposition_2params(data,
     ax0.set_title(orig_sig_plot_title)
     ax0.grid(True)
 
+    last_gs = 3
+
     # Filterbank plot
-    if fb_xlim is not None:
-        ax1.set_xlim(fb_xlim)
-    ax1 = fig.add_subplot(gs[3:4])  
-    ax1.plot(fftfreq, fb_matrix.T)
-    ax1.grid(True)
-    if fb_log_freq:
-        ax1.set_xscale('log')
-        fb_freq_units += ' [log scaled]'
-    ax1.set_xlabel('Frequency'+fb_freq_units)
-    
-    ax1.set_title(filterbank_plot_title)
-    # ax1.set_xticks(center_freq)
-    if fb_plot_sci_not:
-        ax1.ticklabel_format(style='sci',scilimits=(0,0),axis='x')
-        ax1.tick_params(rotation=35,labelsize=8,axis='x')
+    if plot_filterbank:
+        if fb_xlim is not None:
+            ax1.set_xlim(fb_xlim)
+        ax1 = fig.add_subplot(gs[3:4])  
+        ax1.plot(fftfreq, fb_matrix.T)
+        ax1.grid(True)
+        if fb_log_freq:
+            ax1.set_xscale('log')
+            fb_freq_units += ' [log scaled]'
+        ax1.set_xlabel('Frequency'+fb_freq_units)
+            
+        ax1.set_title(filterbank_plot_title)
+        if fb_plot_sci_not:
+            ax1.ticklabel_format(style='sci',scilimits=(0,0),axis='x')
+            ax1.tick_params(rotation=35,labelsize=8,axis='x')
+        
+        last_gs += 3
 
     # Get filtered signals
     filtered = {}
@@ -232,13 +247,13 @@ def filter_decomposition_2params(data,
         
      # Reconstruction (on top of original)
     if plot_reconstruction:
-        ax2 = fig.add_subplot(gs[6:8],sharex=ax0,sharey=ax0)
+        last_gs += 1
+        ax2 = fig.add_subplot(gs[last_gs:last_gs+2],sharex=ax0,sharey=ax0)
         for col in data.columns:
             ax2.plot(x,np.sum(filtered[col],axis=0),linestyle='dotted',alpha=0.9,label='filterbank reconstruction')
         ax2.legend(loc='upper right',bbox_to_anchor=(1.1, 1.2),fontsize=8)
-        last_gs = 9
-    else:
-        last_gs = 6
+        last_gs += 3
+    
 
     # Filtered Signal Decomposition
     for i in range(fb_matrix.shape[0]):
@@ -268,18 +283,22 @@ def filter_decomposition_2params(data,
                 ha='left',va='top',
                 fontsize=8,
                 bbox=dict(facecolor='white', edgecolor='black',alpha=0.7))
-        if i != fb_matrix.shape[0]-1:
+        if i != fb_matrix.shape[0]-1 or syn_map_data is not None:
             ax3.tick_params(labelbottom=False)
         
         ax3.grid(True)
         if i==0:
             ax3.set_title('Signal decomposition '+add_to_sig_title,fontsize=15)
+            if syn_map_data is not None and plot_filterbank:
+                ax3.tick_params(labeltop=True)
     if sig_xlim is not None:
         ax3.set_xlim(sig_xlim)
 
         ax0.xaxis.set_major_formatter(mdates.DateFormatter('%m-%d'))
         ax3.xaxis.set_major_formatter(mdates.DateFormatter('%m-%d'))
+    last_gs += 2*fb_matrix.shape[0]+1
     
+
     if syn_map_data is not None:
         # Synoptic map
         ax4 = fig.add_subplot(gs[-5:])
