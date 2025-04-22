@@ -198,22 +198,10 @@ if __name__ == '__main__':
     cr_start,cr_end = crdt.get_start_end_dates(CR_dates=CR_dates,
                                      carr_rot_num=cr_num)
 
-    # Visualize application
-    # for col in mag_df.columns:
-    #     fb_vis.filter_decomposition(data=mag_df[col],
-    #                               fb_matrix=fltbnk.fb_matrix,
-    #                               fftfreq=fltbnk.freq_spectrum['sample_rate_frac'],
-    #                             #   syn_map_data=image_data,
-    #                               cadence=dt.timedelta(minutes=1),
-    #                               figsize=(10,10),
-    #                             #   fb_xlim = (0,fltbnk.edge_freq[-1]),
-    #                             #   sig_xlim=(cr_start,cr_end),
-    #                               center_freq = None,
-    #                               plot_reconstruction=False,
-    #                               fb_log_freq=True,
-    #                               fb_plot_sci_not=False)
+    scalar_params = ['F','flow_speed']
+    mag_components = ['BX_GSE','BY_GSE','BZ_GSE']
 
-    fb_vis.filter_decomposition(data=mag_df,
+    fb_vis.filter_decomposition(data=mag_df[scalar_params],
                                   fb_matrix=fltbnk.fb_matrix,
                                   fftfreq=fltbnk.freq_spectrum['sample_rate_frac'],
                                 #   syn_map_data=image_data,
@@ -227,7 +215,7 @@ if __name__ == '__main__':
                                   fb_log_freq=True,
                                   fb_plot_sci_not=False)
     
-    fb_vis.filter_decomposition(data=mag_df,
+    fb_vis.filter_decomposition(data=mag_df[scalar_params],
                                   fb_matrix=fltbnk.fb_matrix,
                                   fftfreq=fltbnk.freq_spectrum['sample_rate_frac'],
                                   syn_map_data=image_data,
@@ -238,6 +226,40 @@ if __name__ == '__main__':
                                   sig_xlim=(cr_start,cr_end),
                                   y_labels=['Avg. Mag Field (nT)','Flow Speed (m/s)'],
                                   add_to_sig_title=f'(CR{cr_num})',
+                                  center_freq = None,
+                                  plot_reconstruction=False,
+                                  fb_log_freq=True,
+                                  fb_plot_sci_not=False)
+    
+    final_res = (dt.datetime(year=2013,month=5,day=31,hour=12),dt.datetime(year=2013,month=6,day=3))
+
+    fb_vis.filter_decomposition(data=mag_df[scalar_params],
+                                  fb_matrix=fltbnk.fb_matrix,
+                                  fftfreq=fltbnk.freq_spectrum['sample_rate_frac'],
+                                  cadence=dt.timedelta(minutes=1),
+                                  figsize=(8.5,10),
+                                  plot_filterbank=False,
+                                #   fb_xlim = (0,fltbnk.edge_freq[-1]),
+                                  sig_xlim=(final_res),
+                                  y_labels=['Avg. Mag Field (nT)','Flow Speed (m/s)'],
+                                  date_formatter="%m-%d %H:%M",
+                                  rotate_xticks=25,
+                                  center_freq = None,
+                                  plot_reconstruction=False,
+                                  fb_log_freq=True,
+                                  fb_plot_sci_not=False)
+
+    fb_vis.filter_decomposition(data=mag_df[mag_components],
+                                  fb_matrix=fltbnk.fb_matrix,
+                                  fftfreq=fltbnk.freq_spectrum['sample_rate_frac'],
+                                  cadence=dt.timedelta(minutes=1),
+                                  figsize=(8.5,10),
+                                  plot_filterbank=False,
+                                #   fb_xlim = (0,fltbnk.edge_freq[-1]),
+                                  sig_xlim=final_res,
+                                  y_labels=['(nT)'],
+                                  date_formatter="%m-%d %H:%M",
+                                  rotate_xticks=25,
                                   center_freq = None,
                                   plot_reconstruction=False,
                                   fb_log_freq=True,
