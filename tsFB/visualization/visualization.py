@@ -35,7 +35,9 @@ def filter_decomposition(data,
                          plot_filterbank=True,
                          fb_xlim=None,
                          sig_xlim=None,
-                         y_labels=None,
+                         date_formatter = "%m-%d",
+                         rotate_xticks = 0,
+                         y_labels:list=None,
                          center_freq=None,
                          filterbank_plot_title="Filter bank",
                          add_to_sig_title="",
@@ -71,13 +73,19 @@ def filter_decomposition(data,
     elif data.shape[1] == 2:
         col1, col2 = data.columns
         ax01 = ax0.twinx()
-        ax0.plot(data[col1], alpha=0.9, color="blue")
-        ax01.plot(data[col2], alpha=0.7, color="red")
-        ax0.set_ylabel(y_labels[0] if y_labels else col1, color="blue")
-        ax0.tick_params(axis="y", labelcolor="blue")
-        ax01.set_ylabel(y_labels[1] if y_labels else col2, color="red")
-        ax01.tick_params(axis="y", labelcolor="red")
-
+        c1 = 'blue'
+        c2 = 'red'
+        ax0.plot(data[col1], alpha=0.9, color=c1)
+        ax01.plot(data[col2], alpha=0.7, color=c2)
+        ax0.set_ylabel(y_labels[0] if y_labels else col1, color=c1)
+        ax0.tick_params(axis="y", labelcolor=c1)
+        ax01.set_ylabel(y_labels[1] if y_labels else col2, color=c2)
+        ax01.tick_params(axis="y", labelcolor=c2)
+    else:
+        for col in data.columns:
+            ax0.plot(data[col],alpha=0.7,label=col)
+        ax0.legend()
+        ax0.set_ylabel(y_labels[0])
     ax0.set_title(orig_sig_plot_title)
     ax0.grid(True)
     last_gs = 3
@@ -118,22 +126,32 @@ def filter_decomposition(data,
         if data.shape[1] == 1:
             col = data.columns[0]
             ax.plot(x, filtered[col][i])
-            if center_freq is not None:
-                ax.text(x=min(x), y=max(filtered[col][i]), s=f"center freq = {center_freq[i]:.2e}",
-                        ha="left", va="top", fontsize=8,
-                        bbox=dict(facecolor="white", edgecolor="black", alpha=0.7))
-        else:
+            
+        elif data.shape[1] == 2:
             col1, col2 = data.columns
             ax_twin = ax.twinx()
-            ax.plot(x, filtered[col1][i], color="blue", alpha=0.9)
-            ax_twin.plot(x, filtered[col2][i], color="red", alpha=0.7)
+            c1 = 'tab:blue'
+            c2 = 'tab:red'
+            ax.plot(x, filtered[col1][i], color=c1, alpha=0.9)
+            ax_twin.plot(x, filtered[col2][i], color=c2, alpha=0.7)
             if i == fb_matrix.shape[0] // 2:
-                ax.set_ylabel(y_labels[0] if y_labels else col1, color="blue")
-                ax_twin.set_ylabel(y_labels[1] if y_labels else col2, color="red")
-            ax.tick_params(axis="y", labelcolor="blue")
-            ax_twin.tick_params(axis="y", labelcolor="red")
-            if center_freq is not None:
-                ax.text(x=min(x), y=max(filtered[col1][i]), s=f"center freq = {center_freq[i]:.2e}",
+                ax.set_ylabel(y_labels[0] if y_labels else col1, color=c1)
+                ax_twin.set_ylabel(y_labels[1] if y_labels else col2, color=c2)
+            ax.tick_params(axis="y", labelcolor=c1)
+            ax_twin.tick_params(axis="y", labelcolor=c2)
+            col = col1 # for the textbox
+
+        else:
+            for col in data.columns:
+                ax.plot(x,filtered[col][i],label=col,alpha=0.7)
+            if i == 0:
+                ax.legend()
+            if i == fb_matrix.shape[0]//2:
+                ax.set_ylabel(y_labels[0])
+
+
+        if center_freq is not None:
+                ax.text(x=min(x), y=max(filtered[col][i]), s=f"center freq = {center_freq[i]:.2e}",
                         ha="left", va="top", fontsize=8,
                         bbox=dict(facecolor="white", edgecolor="black", alpha=0.7))
         ax.grid(True)
@@ -145,8 +163,10 @@ def filter_decomposition(data,
     last_gs += 2 * fb_matrix.shape[0] + 1
     if sig_xlim:
         ax.set_xlim(sig_xlim)
-        ax0.xaxis.set_major_formatter(mdates.DateFormatter("%m-%d"))
-        ax.xaxis.set_major_formatter(mdates.DateFormatter("%m-%d"))
+        ax0.xaxis.set_major_formatter(mdates.DateFormatter(date_formatter))
+        ax0.tick_params(axis='x',rotation=rotate_xticks)
+        ax.xaxis.set_major_formatter(mdates.DateFormatter(date_formatter))
+        ax.tick_params(axis='x',rotation=rotate_xticks)
 
     if syn_map_data is not None:
         ax4 = fig.add_subplot(gs[-5:])
