@@ -25,7 +25,7 @@ import tsFB.filterbank_analysis as fa
 
 # %%
 # %% Get data
-year = '2006'
+year = '2015'
 month = '01'
 day = '01'
 
@@ -67,7 +67,12 @@ cadence = dt.timedelta(seconds=60)
 
 # %%
 SM_window = dt.timedelta(seconds=300)
-DT_window = dt.timedelta(seconds=600)
+DT_window = dt.timedelta(seconds=1200)
+
+'''
+SM = 300; DT = 600: shows concern of max value being at same location as first zero of detrending window
+SM = 500; DT = 1200: 
+'''
 
 # %% [markdown]
 # # Theoretical Frequency Response
@@ -140,7 +145,7 @@ sig_fft_df = fft.rfftn(mag_df,axes=0)
 
 # %%
 # Apply filter: theoretical frequency response
-preprocessing = {'Detrended':DT_theory,'Smoothed':SM_theory,'Detrended + Smoothed':FR_theory}
+preprocessing = {'Smoothed':SM_theory,'Detrended':DT_theory,'Detrended + Smoothed':FR_theory}
 filtered_y={}
 for prepro in preprocessing.keys():
     Y = sig_fft_df.ravel()*preprocessing[prepro]
@@ -152,7 +157,7 @@ fig,axes = plt.subplots(ncols=1,nrows=4,figsize=(12,8),sharex=True)
 axes[0].plot(mag_df)
 axes[0].set_title('Original signal')
 axes[0].grid()
-colors = ['tab:green','tab:orange','tab:purple']
+colors = ['tab:orange','tab:green','tab:purple']
 for i,p in enumerate(filtered_y.keys()):
     axes[i+1].plot(mag_df.index[:-1],filtered_y[p],color=colors[i])
     axes[i+1].set_title(p)
