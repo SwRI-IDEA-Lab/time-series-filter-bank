@@ -213,7 +213,7 @@ if __name__ == '__main__':
     #                               fb_log_freq=True,
     #                               fb_plot_sci_not=False)
 
-    fb_vis.filter_decomposition_2params(data=mag_df,
+    fb_vis.filter_decomposition(data=mag_df,
                                   fb_matrix=fltbnk.fb_matrix,
                                   fftfreq=fltbnk.freq_spectrum['sample_rate_frac'],
                                 #   syn_map_data=image_data,
@@ -221,14 +221,13 @@ if __name__ == '__main__':
                                   figsize=(10,10),
                                 #   fb_xlim = (0,fltbnk.edge_freq[-1]),
                                 #   sig_xlim=(cr_start,cr_end),
-                                  y_label1='Avg. Mag Field (nT)',
-                                  y_label2='Flow Speed (m/s)',
+                                  y_labels=['Avg. Mag Field (nT)','Flow Speed (m/s)'],
                                   center_freq = None,
                                   plot_reconstruction=False,
                                   fb_log_freq=True,
                                   fb_plot_sci_not=False)
     
-    fb_vis.filter_decomposition_2params(data=mag_df,
+    fb_vis.filter_decomposition(data=mag_df,
                                   fb_matrix=fltbnk.fb_matrix,
                                   fftfreq=fltbnk.freq_spectrum['sample_rate_frac'],
                                   syn_map_data=image_data,
@@ -237,8 +236,7 @@ if __name__ == '__main__':
                                   plot_filterbank=False,
                                 #   fb_xlim = (0,fltbnk.edge_freq[-1]),
                                   sig_xlim=(cr_start,cr_end),
-                                  y_label1='Avg. Mag Field (nT)',
-                                  y_label2='Flow Speed (m/s)',
+                                  y_labels=['Avg. Mag Field (nT)','Flow Speed (m/s)'],
                                   add_to_sig_title=f'(CR{cr_num})',
                                   center_freq = None,
                                   plot_reconstruction=False,
