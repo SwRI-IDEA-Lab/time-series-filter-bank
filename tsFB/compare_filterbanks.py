@@ -1,17 +1,9 @@
-import cdflib
-
 import argparse
-from tqdm import tqdm
-from pathlib import Path
-import pandas as pd
-from numpy import abs, append, arange, insert, linspace, log10, round, zeros
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.gridspec as gridspec
+import matplotlib.dates as mdates
 
-import dill as pickle
-
-from mpl_toolkits.mplot3d import Axes3D 
 
 from scipy import fft
 import random as rnd
@@ -29,14 +21,6 @@ import tsFB.data.prototyping_metrics as pm
 import tsFB.utils.time_chunking as tc
 import tsFB.build_filterbanks as bfb
 import tsFB.filterbank_analysis as fba
-
-# Data paths
-_PSP_MAG_DATA_DIR = '/sw-data/psp/mag_rtn/'
-_WIND_MAG_DATA_DIR = '/sw-data/wind/mfi_h2/'
-_OMNI_MAG_DATA_DIR = '/sw-data/nasaomnireader/'
-_SRC_DATA_DIR = os.path.join(_SRC_DIR,'data',)
-
-_EXPONENTS_LIST = [2.15, 1.05, 1.05]
 
 # Debugger arguments
 parser = argparse.ArgumentParser()
@@ -131,7 +115,7 @@ class compare_FB:
         self.MA_fb.build_DTSM_fb(windows=self.windows)
         self.MA_fb.add_mvgavg_DC_HF()
         
-        # Mel (Triangle) Filterbank=====================================
+        # Triangle Filterbank=====================================
         self.Tri_fb = bfb.filterbank(data_len=self.data_len,
                                      cadence=self.cadence)
         self.Tri_fb.build_triangle_fb((np.sort(self.MA_fb.center_freq)[0],np.sort(self.MA_fb.center_freq)[-1]),
@@ -155,7 +139,7 @@ class compare_FB:
         # Analysis tools================================================
         self.fb_analysis = {'Moving Average':{'fb_object':self.MA_fb,
                                               'fb_matrix':self.MA_fb.fb_matrix},
-                            'Mel':{'fb_object':self.Tri_fb,
+                            'Triangular':{'fb_object':self.Tri_fb,
                                    'fb_matrix':self.Tri_fb.fb_matrix}}
         
         for i,fb_name in enumerate(self.fb_analysis.keys()):
@@ -227,14 +211,15 @@ class compare_FB:
                 ax2.set_ylim(ymin=ymin,ymax=ymax)
 
         l_colors = {'Moving Average': 'brown',
-                    'Mel':'green'}
+                    'Triangular':'green'}
 
         # Plots==================================================================================
         for fb_name in self.fb_analysis.keys():
             # Reconstruction plotted over original----------------------------------------------
             fltrbank = self.fb_analysis[fb_name]
-            ax0.plot(x,fltrbank['reconstruction'],linestyle='dotted',color=l_colors[fb_name],alpha=0.9,label=f'{fb_name} reconstruction')
-            ax0.legend()
+            ax0.plot(x,fltrbank['reconstruction'],linestyle='dotted',color=l_colors[fb_name],alpha=0.9,label=f'{"Moving Avg." if fb_name == 'Moving Average' else fb_name} reconstruction')
+            ax0.legend(bbox_to_anchor=(0.8, 1.42),
+                         loc='upper left', borderaxespad=0.)
             
             # Direct residual--------------------------------------------------------------------
             if plot_direct_residual:
@@ -254,12 +239,13 @@ class compare_FB:
                 if percent_rel_res:
                     ax2.set_ylabel('% error')
                 
-                ax2.tick_params(labelbottom=False)
+                ax2.xaxis.set_major_formatter(mdates.DateFormatter('%H:%M'))
                 ax2.set_title('Relative Residual',y=1.0,pad=-14,
                             fontsize=10,
                             bbox=dict(facecolor='white', edgecolor='black',alpha=0.7))
                 ax2.set_xlabel('Time')
                 ax2.grid(True)
+        plt.tight_layout()
         plt.show()
         
 
@@ -332,26 +318,42 @@ class compare_FB:
                 ax1.tick_params(labelleft=False)
 
             # Plot Decomposition--------------------------------------------------
-            for j,bank in enumerate(fltrbnk['filtered_sigs']):
-                ax2 = fig.add_subplot(two_col_gs[2*j+9:2*j+11,i],sharex=ax1)    
-                ax2.plot(x,bank)
-                if i ==1:
-                    ax2.text(x=min(x),y=max(bank),s=f'center freq = {fb_obj.center_freq[j]:.2e}',
-                            ha='right',va='top',
-                            fontsize=8,
-                            bbox=dict(facecolor='white', edgecolor='black',alpha=0.7))
-                    ax2.tick_params(labelleft=False)
-                # ax2.set_yticks([])
+        for j in range(len(fltrbnk['filtered_sigs'])):
+            fb1,fb2 = self.fb_analysis.keys()
+            fb1_sig = self.fb_analysis[fb1]['filtered_sigs']
+            fb2_sig = self.fb_analysis[fb2]['filtered_sigs']
+
+            ax2a = fig.add_subplot(two_col_gs[2*j+9:2*j+11,0],sharex=ax1)
+            ax2b = fig.add_subplot(two_col_gs[2*j+9:2*j+11,1],sharex=ax1,sharey=ax2a)  
+
+            ax2a.plot(x,fb1_sig[j])
+            ax2b.plot(x,fb2_sig[j])
+            # if i ==1:
+            ax2b.text(x=min(x),y=max(fb2_sig[j]),s=f'center freq = {fb_obj.center_freq[j]:.2e}',
+                    ha='right',va='top',
+                    fontsize=8,
+                    bbox=dict(facecolor='white', edgecolor='black',alpha=0.7))
+            ax2b.tick_params(labelleft=False)
+            # ax2.set_yticks([])
+            
+            if j==0:
+                ax2a.set_title(f'{fb1} Signal Decomposition',fontsize=12)
+                ax2b.set_title(f"{fb2} Signal Decomposition",fontsize=12)
                 
-                if j==0:
-                    ax2.set_title(fb_name+' Signal Decomposition',fontsize=12)
-                    # ax2.tick_params(labeltop=True)
-                    ax2.tick_params(labelbottom=False)
-                elif j==len(fltrbnk['filtered_sigs'])-1:
-                    ax2.set_xticklabels(ax1.get_xticklabels(),rotation=25,ha='right',rotation_mode='anchor')
-                else:
-                    ax2.tick_params(labelbottom=False)
-                ax2.grid()
+                ax2a.tick_params(labelbottom=False)
+                ax2b.tick_params(labelbottom=False)
+            
+            elif j==len(fb1_sig)-1:
+                ax2a.set_xticklabels(ax1.get_xticklabels(),rotation=25,ha='right',rotation_mode='anchor')
+                ax2b.set_xticklabels(ax1.get_xticklabels(),rotation=25,ha='right',rotation_mode='anchor')
+            
+            else:
+                ax2a.tick_params(labelbottom=False)
+                ax2b.tick_params(labelbottom=False)
+            
+            ax2a.grid()
+            ax2b.grid()
+        ax0.xaxis.set_major_formatter(mdates.DateFormatter('%H:%M'))
         plt.show()
 
 if __name__ == '__main__':
@@ -402,12 +404,13 @@ if __name__ == '__main__':
                             # windows=[dt.timedelta(weeks=4*6).seconds,dt.timedelta(365*2).seconds,dt.timedelta(days=365*11).seconds])
                             
         # Overplot reconstruction with original and view residuals--------------------
-        # comp_anly.analyze_reconstruction(orig_sig_plot_title=f'[{args["start_year"]}-{args['start_month']}-{args['start_day']}] Original series ({col})',
-        #                                  figsize=(8,5.5),
-        #                                  rel_res_ylim=(-5,105))
+        comp_anly.analyze_reconstruction(orig_sig_plot_title=f'[{args["start_year"]}-{args['start_month']}-{args['start_day']}] Original series ({'B_mag' if col=='F' else col})',
+                                         figsize=(8,5.5),
+                                         )
+                                        #  rel_res_ylim=(-5,105))
         
         # Side-by-side comparison: Filterbanks, reconstruction, & deconstruction------
-        comp_anly.compare_decomp(orig_sig_plot_title=f'[{args["start_year"]}-{args['start_month']}-{args['start_day']}] Original series ({col})',
+        comp_anly.compare_decomp(orig_sig_plot_title=f'[{args["start_year"]}-{args['start_month']}-{args['start_day']}] Original series ({'B_mag' if col=='F' else col})',
                                      figsize=(8.5,11),
                                      percent_rel_res=True,
                                      abs_residual=args['absolute_residual'],
