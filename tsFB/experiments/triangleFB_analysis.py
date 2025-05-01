@@ -30,6 +30,7 @@ import tsFB.utils.time_chunking as tc
 import tsFB.build_filterbanks as fb
 import tsFB.data.helper_funcs as hf
 import tsFB.filterbank_analysis as fa
+import tsFB.visualization.visualization as fb_vis
 
 # Data paths
 _PSP_MAG_DATA_DIR = '/sw-data/psp/mag_rtn/'
@@ -186,14 +187,13 @@ if __name__ == '__main__':
     
     # Visualize application
     title_date_range = f'[{args["start_date"].year}-{format(args['start_date'].month,'02')}-{format(args['start_date'].day,'02')} to {args["stop_date"].year}-{format(args['stop_date'].month,'02')}-{format(args['stop_date'].day,'02')}]'
-    for col in mag_df.columns:
-        fa.view_filter_decomposition(data=mag_df[col],
+    fb_vis.filter_decomposition(data=mag_df[['F']],
                                   fb_matrix=fltbnk.fb_matrix,
                                   fftfreq=fltbnk.freq_spectrum['sample_rate_frac'],
                                   cadence=dt.timedelta(minutes=1),
                                   figsize=(11,8.5),
                                   fb_xlim = (0,fltbnk.edge_freq[-1]),
-                                  sig_xlim=(dt.datetime(year=2010,month=5,day=19),dt.datetime(year=2010,month=6,day=20)),
+                                #   sig_xlim=(dt.datetime(year=2010,month=5,day=19),dt.datetime(year=2010,month=6,day=20)),
                                   center_freq = fltbnk.center_freq,
-                                  orig_sig_plot_title=f'{title_date_range} Original series ({col})',
+                                #   orig_sig_plot_title=f'{title_date_range} Original series ({col})',
                                   plot_reconstruction=False)
