@@ -168,11 +168,11 @@ if __name__ == '__main__':
 
     windows4 = [dt.timedelta(days=365*11),
                dt.timedelta(days=365*0.5),dt.timedelta(days=5),
-               dt.timedelta(days=1),dt.timedelta(hours=20),
+               dt.timedelta(days=1),dt.timedelta(hours=18),
                dt.timedelta(hours=1.5)]
     win4freq = [fb.time_window_to_npt_freq(w,data_cadence=dt.timedelta(minutes=1)) for w in windows4]
     
-    # Build Filterbank
+    # Build Filterbanks
     fltbnk3 = fb.filterbank(data_len=len(mag_df),
                            cadence=dt.timedelta(seconds=60))
     fltbnk3.build_trapezoid_fb(filter_freq_range=None,
@@ -195,8 +195,8 @@ if __name__ == '__main__':
     scalar_params = ['F','flow_speed']
     mag_components = ['BX_GSE','BY_GSE']
 
-    y_labs = {'scalar_params':['|B| (nT)','Flow Speed (m/s)'],
-              'mag_components':['Bx (nT)','By (nT)']}
+    y_labs = {'scalar_params':('|B| (nT)','Speed (m/s)'),
+              'mag_components':('Bx (nT)','By (nT)')}
     
     res1 = (dt.datetime(year=2013,month=5,day=31,hour=12),dt.datetime(year=2013,month=6,day=3,hour=0))
 
@@ -205,8 +205,25 @@ if __name__ == '__main__':
 
     final_res = (dt.datetime(year=2013,month=6,day=1,hour=0),dt.datetime(year=2013,month=6,day=1,hour=12))
     
-    fb_vis.stack_subdecomp(data1=mag_df[scalar_params],
-                           data2=mag_df[mag_components],
+    # fb_vis.stack_subdecomp(data1=mag_df[scalar_params],
+    #                        data2=mag_df[mag_components],
+    #                        main_filter=fltbnk3.fb_matrix[-1],
+    #                        sub_filter=fltbnk4.fb_matrix[-2],
+    #                        fftfreq=fltbnk3.freq_spectrum['sample_rate_frac'],
+    #                        cadence=dt.timedelta(minutes=1),
+    #                        figsize=(8.5,10),
+    #                        plot_filterbank=False,
+    #                        sig_xlim=final_res,
+    #                        y_labels1=y_labs['scalar_params'],
+    #                        y_labels2=y_labs['mag_components'],
+    #                        colors1=['blue','red'],
+    #                        colors2=['turquoise','orange'],
+    #                        ylim1=[(-10,10),(-150,150)],
+    #                        ylim2=[(-10,10),(-15,15)],
+    #                        date_formatter="%m-%d %H:%M",
+    #                        rotate_xticks=15)
+
+    fb_vis.stack_subdecomp(data=mag_df[scalar_params+mag_components],
                            main_filter=fltbnk3.fb_matrix[-1],
                            sub_filter=fltbnk4.fb_matrix[-2],
                            fftfreq=fltbnk3.freq_spectrum['sample_rate_frac'],
@@ -214,12 +231,26 @@ if __name__ == '__main__':
                            figsize=(8.5,10),
                            plot_filterbank=False,
                            sig_xlim=final_res,
-                           y_labels1=y_labs['scalar_params'],
-                           y_labels2=y_labs['mag_components'],
-                           colors1=['blue','red'],
-                           colors2=['turquoise','orange'],
-                           ylim1=[(-10,10),(-150,150)],
-                           ylim2=[(-10,10),(-15,15)],
+                           y_labels=[y_labs['scalar_params']]+[y_labs['mag_components']],
+                           colors=[('blue','red'),('turquoise','orange')],
+                           ylims=[[(-10,10),(-150,150)],
+                                  [(-10,10),(-15,15)]],
                            date_formatter="%m-%d %H:%M",
                            rotate_xticks=15)
+    
+    fb_vis.stack_subdecomp(data=mag_df[scalar_params+mag_components+['proton_density','proton_density']],
+                           main_filter=fltbnk3.fb_matrix[-1],
+                           sub_filter=fltbnk4.fb_matrix[-2],
+                           fftfreq=fltbnk3.freq_spectrum['sample_rate_frac'],
+                           cadence=dt.timedelta(minutes=1),
+                           figsize=(8.5,10),
+                           plot_filterbank=False,
+                           sig_xlim=final_res,
+                           y_labels=[y_labs['scalar_params']]+[y_labs['mag_components']]+[('Density (#/cm$^3$)','Density (#/cm$^3$)')],
+                           colors=[('blue','red'),('turquoise','orange'),('purple','purple')],
+                           ylims=[[(-10,10),(-150,150)],
+                                  [(-10,10),(-15,15)],
+                                  [(-20,20),(-20,20)]],
+                           date_formatter="%m-%d %H:%M",
+                           rotate_xticks=7)
     

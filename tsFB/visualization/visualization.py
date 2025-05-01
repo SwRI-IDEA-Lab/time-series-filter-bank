@@ -200,9 +200,7 @@ def filter_decomposition(data,
     plt.tight_layout()
     plt.show()
 
-
-def stack_subdecomp(data1,
-                    data2,
+def stack_subdecomp(data,
                     main_filter,
                     sub_filter,
                     fftfreq,
@@ -214,166 +212,132 @@ def stack_subdecomp(data1,
                     sig_xlim=None,
                     date_formatter = "%m-%d",
                     rotate_xticks = 0,
-                    y_labels1:list=None,
-                    y_labels2:list=None,
-                    colors1:list=None,
-                    colors2:list=None,
-                    ylim1 = None,
-                    ylim2 = None,
+                    y_labels:list=None,
+                    colors:list=None,
+                    ylims = None,
                     add_to_sig_title=""):
-    x = data1.index
+    x = data.index
     orig_sig_plot_title = f"Original Signal [{x[0].strftime('%Y-%m-%d')} to {x[-1].strftime('%Y-%m-%d')}] {add_to_sig_title}"
     if sig_xlim is not None:
         orig_sig_plot_title = f"Original Signal [{sig_xlim[0].strftime('%Y-%m-%d')} to {sig_xlim[-1].strftime('%Y-%m-%d')}] {add_to_sig_title}"
     
+    assert len(data.columns) % 2 ==0, "Even number of columns needed (Note: you can have the same data column twice to plot just one parameter in a single plot)"
+
     # Gridspec setup
-    gs_fb = 3 if plot_filterbank else 0
-    total_gs_rows = 1 + 1 + gs_fb + 3 + 2 
+    total_gs_rows =  len(data.columns) + 1 + len(data.columns)
     fig = plt.figure(figsize=figsize)
     gs = gridspec.GridSpec(ncols = 1, 
                            nrows = total_gs_rows, 
                            figure = fig, 
                            wspace = gs_wspace, 
                            hspace = gs_hspace)
+    
+    # Other prep
+    col1s = data.columns[::2]
+    col2s = data.columns[1::2]
+
+    col_pairs = []
+    for i,col1 in enumerate(col1s):
+        col_pairs.append((col1,col2s[i]))
+
+    if colors is None:
+        colors = [('blue','red')]*len(col1s)
 
     # Plot original signal
-    ax0 = fig.add_subplot(gs[0:1])
-    ax1 = fig.add_subplot(gs[1:2],sharex=ax0)
+    last_gs = 0
+    for i in range(len(col1s)):
+        ax0 = fig.add_subplot(gs[last_gs:last_gs+2])
+        ax01 = ax0.twinx()
+        y_lab = y_labels[i] if y_labels is not None else (col1s[i],col2s[i])
+        clr = colors[i]
 
-    col11, col12 = data1.columns
-    ax01 = ax0.twinx()
+        ax0.plot(data[col1s[i]], alpha=0.9, color=clr[0])
+        ax01.plot(data[col2s[i]], alpha=0.7, color=clr[1])
+        ax0.set_ylabel(y_lab[0], color=clr[0])
+        ax0.tick_params(axis="y", labelcolor=clr[0])
+        ax01.set_ylabel(y_lab[1], color=clr[1])
+        ax01.tick_params(axis="y", labelcolor=clr[1])
+        
+        if i == 0:
+            ax0.set_title(orig_sig_plot_title)
+        
+        if sig_xlim:
+            ax0.set_xlim(sig_xlim)
+            ax0.xaxis.set_major_formatter(mdates.DateFormatter(date_formatter))
+            ax0.set_xticklabels(ax0.get_xticklabels(),rotation=rotate_xticks,ha='right',rotation_mode='anchor')
 
-    col21, col22 = data2.columns
-    ax11 = ax1.twinx()
+        if i != len(col1s)-1:
+            ax0.tick_params(labelbottom=False)
 
-    if colors1 is not None:
-        c11 = colors1[0]
-        c12 = colors1[1]
-    else:
-        c11 = 'blue'
-        c12 = 'red'
-    if colors2 is not None:
-        c21 = colors2[0]
-        c22 = colors2[1]
-    else:
-        c21 = 'turquoise'
-        c22 = 'orange'
+        ax0.grid(True)
+        last_gs+=2
 
-    ax0.plot(data1[col11], alpha=0.9, color=c11)
-    ax01.plot(data1[col12], alpha=0.7, color=c12)
-    ax0.set_ylabel(y_labels1[0] if y_labels1 is not None else col11, color=c11)
-    ax0.tick_params(axis="y", labelcolor=c11)
-    ax01.set_ylabel(y_labels1[1] if y_labels1 is not None else col12, color=c12)
-    ax01.tick_params(axis="y", labelcolor=c12)
-
-    ax0.set_title(orig_sig_plot_title)
-    ax0.grid(True)
-
-    ax1.plot(data2[col21],alpha=0.9, color = c21)
-    ax11.plot(data2[col22],alpha=0.7, color =c22)
-    ax1.set_ylabel(y_labels2[0] if y_labels2 is not None else col21,color=c21)
-    ax1.tick_params(axis="y", labelcolor=c21)
-    ax11.set_ylabel(y_labels2[1] if y_labels2 is not None else col22, color=c22)
-    ax11.tick_params(axis='y', labelcolor=c22)
-    ax1.grid(True)
-
-    ax0.tick_params(labelbottom=False)
-    last_gs = 2
-
-    # # Filterbank plot
-    # if plot_filterbank:
-    #     ax1 = fig.add_subplot(gs[last_gs : last_gs + 1])
-    #     ax1.plot(fftfreq, fb_matrix.T)
-    #     if fb_xlim:
-    #         ax1.set_xlim(fb_xlim)
-    #     if fb_log_freq:
-    #         ax1.set_xscale("log")
-    #         fb_freq_units += " [log scaled]"
-    #     ax1.set_xlabel("Frequency" + fb_freq_units)
-    #     ax1.set_title(filterbank_plot_title)
-    #     ax1.grid(True)
-    #     if fb_plot_sci_not:
-    #         ax1.ticklabel_format(style="sci", scilimits=(0, 0), axis="x")
-    #         ax1.tick_params(rotation=35, labelsize=8, axis="x")
-    #     last_gs += 3
+    
 
     # Filtered signals
-        #data 1
-    filtered1_main = {}
-    for col in data1.columns:
-        filtered1_main[col] = fa.get_filtered_signals(data=data1[col], fb_matrix=np.array([main_filter]), fftfreq=fftfreq, cadence=cadence)
+    filtered_main = {}
+    for col in np.unique(data.columns):
+        if sum(data.columns == col)>1:
+            d_col = data[col].iloc[:,0]
+        else:
+            d_col = data[col]
+        filtered_main[col] = fa.get_filtered_signals(data=d_col, fb_matrix=np.array([main_filter]), fftfreq=fftfreq, cadence=cadence)
 
-    filtered1_sub = {}
-    for col in data1.columns:
-        filtered1_sub[col] = fa.get_filtered_signals(data=data1[col], fb_matrix=np.array([sub_filter]), fftfreq=fftfreq, cadence=cadence)
-
-        #data 2
-    filtered2_main = {}
-    for col in data2.columns:
-        filtered2_main[col] = fa.get_filtered_signals(data=data2[col],fb_matrix=np.array([main_filter]),fftfreq=fftfreq,cadence=cadence)
-
-    filtered2_sub = {}
-    for col in data2.columns:
-        filtered2_sub[col] = fa.get_filtered_signals(data=data2[col],fb_matrix=np.array([sub_filter]),fftfreq=fftfreq,cadence=cadence)
+    filtered_sub = {}
+    for col in np.unique(data.columns):
+        if sum(data.columns == col)>1:
+            d_col = data[col].iloc[:,0]
+        else:
+            d_col = data[col]
+        filtered_sub[col] = fa.get_filtered_signals(data=d_col, fb_matrix=np.array([sub_filter]), fftfreq=fftfreq, cadence=cadence)
 
     # Filtered signal plots
-    fc11 = f'xkcd:{c11}'
-    fc12 = f'xkcd:{c12}'
-    fc21 = f'xkcd:{c21}'
-    fc22 = f'xkcd:{c22}'
+    f_colors = []
+    for cp in colors:
+        clr1 = cp[0]
+        clr2 = cp[1]
+        f_colors.append((f'xkcd:{clr1}',f'xkcd:{clr2}'))
 
-    ax2 = fig.add_subplot(gs[last_gs + 1 : last_gs + 3], sharex=ax0)
-    ax21 = ax2.twinx()
+    last_gs +=1
+    for i in range(len(col1s)):
+        ax2 = fig.add_subplot(gs[last_gs : last_gs + 2], sharex=ax0)
+        ax21 = ax2.twinx()
 
-    ax3 = fig.add_subplot(gs[last_gs+3:last_gs+5],sharex=ax0)
-    ax31 = ax3.twinx()
-    
-    sublinewidth = 2
-    ax2.plot(x, filtered1_main[col11][0], color=fc11, alpha=0.5)
-    ax2.plot(x,filtered1_sub[col11][0],color=c11, linewidth=sublinewidth, alpha=0.7)
-    ax21.plot(x, filtered1_main[col12][0], color=fc12, alpha=0.5)
-    ax21.plot(x, filtered1_sub [col12][0], color=fc12,linewidth=sublinewidth, alpha=0.7)
-    
-    ax2.set_ylabel(y_labels1[0] if y_labels1 is not None else col11, color=fc11)
-    ax2.tick_params(axis='y',labelcolor=fc11)
-    ax21.set_ylabel(y_labels1[1] if y_labels1 is not None else col12, color=fc12)
-    ax21.tick_params(axis='y',labelcolor=fc12)
-
-    ax3.plot(x,filtered2_main[col21][0],color=fc21, alpha=0.5)
-    ax3.plot(x,filtered2_sub[col21][0],color=fc21,linewidth=sublinewidth,alpha=0.7)
-    ax31.plot(x,filtered2_main[col22][0],color=fc22,alpha=0.5)
-    ax31.plot(x,filtered2_sub[col22][0],color=fc22,linewidth=sublinewidth,alpha=0.7)
-
-    ax3.set_ylabel(y_labels2[0] if y_labels2 is not None else col21, color=fc21)
-    ax3.tick_params(axis='y',labelcolor=fc11)
-    ax31.set_ylabel(y_labels2[1] if y_labels2 is not None else col22, color=fc22)
-    ax31.tick_params(axis='y',labelcolor=fc22)
-
-    if ylim1 is not None:
-        lim11 = ylim1[0]
-        lim12 = ylim1[1]
-        ax2.set_ylim(lim11[0],lim11[1])
-        ax21.set_ylim(lim12[0],lim12[1])
-    if ylim2 is not None:
-        lim21 = ylim2[0]
-        lim22 = ylim2[1]
-        ax3.set_ylim(lim21[0],lim21[1])
-        ax31.set_ylim(lim22[0],lim22[1])
-
-        ax2.grid(True)
-        ax3.grid(True)
+        f_clr = f_colors[i]
+        y_lab = y_labels[i] if y_labels is not None else (col1s[i],col2s[i])
         
-        ax2.set_title("Filtered Signal " + add_to_sig_title, fontsize=15)
+        sublinewidth = 2
+        ax2.plot(x, filtered_main[col1s[i]][0], color=f_clr[0], alpha=0.5)
+        ax2.plot(x, filtered_sub[col1s[i]][0],color=f_clr[0], linewidth=sublinewidth, alpha=0.7)
+        ax21.plot(x, filtered_main[col2s[i]][0], color=f_clr[1], alpha=0.5)
+        ax21.plot(x, filtered_sub [col2s[i]][0], color=f_clr[1],linewidth=sublinewidth, alpha=0.7)
+        
+        ax2.set_ylabel(y_lab[0], color=f_clr[0])
+        ax2.tick_params(axis='y',labelcolor=f_clr[0])
+        ax21.set_ylabel(y_lab[1], color=f_clr[1])
+        ax21.tick_params(axis='y',labelcolor=f_clr[1])
 
-        ax2.tick_params(labelbottom=False)
+        if ylims is not None:
+            assert len(ylims)==len(col1s), "Not enough ylims provided for each pair of data"
+            lims = ylims[i]
+            lim1 = lims[0]
+            lim2 = lims[1]
+            ax2.set_ylim(lim1[0],lim1[1])
+            ax21.set_ylim(lim2[0],lim2[1])
 
+        if i == 0:
+            ax2.set_title("Filtered Signal " + add_to_sig_title, fontsize=15)
+
+        if i != len(col1s)-1:
+            ax2.tick_params(labelbottom=False)
+        
+        ax2.grid(True)
+
+        last_gs+=2
+    
     if sig_xlim:
-        ax0.set_xlim(sig_xlim)
-        # ax1.set_xlim(sig_xlim)
-        ax1.xaxis.set_major_formatter(mdates.DateFormatter(date_formatter))
-        ax1.set_xticklabels(ax1.get_xticklabels(),rotation=rotate_xticks,ha='right',rotation_mode='anchor')
-        ax3.xaxis.set_major_formatter(mdates.DateFormatter(date_formatter))
-        ax3.set_xticklabels(ax3.get_xticklabels(),rotation=rotate_xticks,ha='right',rotation_mode='anchor')
+        ax2.xaxis.set_major_formatter(mdates.DateFormatter(date_formatter))
+        ax2.set_xticklabels(ax2.get_xticklabels(),rotation=rotate_xticks,ha='right',rotation_mode='anchor')
 
     
     plt.tight_layout()
