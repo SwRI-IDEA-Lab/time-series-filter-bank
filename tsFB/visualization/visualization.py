@@ -38,6 +38,9 @@ def filter_decomposition(data,
                          date_formatter = "%m-%d",
                          rotate_xticks = 0,
                          y_labels:list=None,
+                         colors:list=None,
+                         HR_ylim = None,
+                         HRp1_ylim:bool=False,
                          center_freq=None,
                          filterbank_plot_title="Filter bank",
                          add_to_sig_title="",
@@ -73,8 +76,12 @@ def filter_decomposition(data,
     elif data.shape[1] == 2:
         col1, col2 = data.columns
         ax01 = ax0.twinx()
-        c1 = 'blue'
-        c2 = 'red'
+        if colors is not None:
+            c1 = colors[0]
+            c2 = colors[1]
+        else:
+            c1 = 'blue'
+            c2 = 'red'
         ax0.plot(data[col1], alpha=0.9, color=c1)
         ax01.plot(data[col2], alpha=0.7, color=c2)
         ax0.set_ylabel(y_labels[0] if y_labels else col1, color=c1)
@@ -83,7 +90,7 @@ def filter_decomposition(data,
         ax01.tick_params(axis="y", labelcolor=c2)
     else:
         for col in data.columns:
-            ax0.plot(data[col],alpha=0.7,label=col)
+            ax0.plot(data[col],alpha=0.75,label=col)
         ax0.legend()
         ax0.set_ylabel(y_labels[0])
     ax0.set_title(orig_sig_plot_title)
@@ -121,33 +128,46 @@ def filter_decomposition(data,
         last_gs += 3
 
     # Decomposition
+    if data.shape[1]==2:
+        c1 = f'xkcd:{c1}'
+        c2 = f'xkcd:{c2}'
     for i in range(fb_matrix.shape[0]):
         ax = fig.add_subplot(gs[last_gs + 2 * i : last_gs + 2 * i + 2], sharex=ax0)
         if data.shape[1] == 1:
             col = data.columns[0]
             ax.plot(x, filtered[col][i])
+            if i == fb_matrix.shape[0]//2:
+                ax.set_ylabel(y_labels[0] if y_labels else col)
             
         elif data.shape[1] == 2:
             col1, col2 = data.columns
             ax_twin = ax.twinx()
-            c1 = 'tab:blue'
-            c2 = 'tab:red'
+            
             ax.plot(x, filtered[col1][i], color=c1, alpha=0.9)
-            ax_twin.plot(x, filtered[col2][i], color=c2, alpha=0.7)
+            ax_twin.plot(x, filtered[col2][i], color=c2, alpha=0.75)
             if i == fb_matrix.shape[0] // 2:
                 ax.set_ylabel(y_labels[0] if y_labels else col1, color=c1)
                 ax_twin.set_ylabel(y_labels[1] if y_labels else col2, color=c2)
             ax.tick_params(axis="y", labelcolor=c1)
             ax_twin.tick_params(axis="y", labelcolor=c2)
             col = col1 # for the textbox
+            if HR_ylim is not None:
+                if (HRp1_ylim and i==fb_matrix.shape[0]-2) or i == fb_matrix.shape[0]-1:
+                    lim1 = HR_ylim[0]
+                    lim2 = HR_ylim[1]
+                    ax.set_ylim(lim1[0],lim1[1])
+                    ax_twin.set_ylim(lim2[0],lim2[1])
 
         else:
             for col in data.columns:
-                ax.plot(x,filtered[col][i],label=col,alpha=0.7)
+                ax.plot(x,filtered[col][i],label=col,alpha=0.75)
             if i == 0:
                 ax.legend()
             if i == fb_matrix.shape[0]//2:
                 ax.set_ylabel(y_labels[0])
+            if HR_ylim is not None:
+                if i == fb_matrix.shape[0]-1:
+                    ax.margins(y=HR_ylim,tight=True)
 
 
         if center_freq is not None:
@@ -164,9 +184,9 @@ def filter_decomposition(data,
     if sig_xlim:
         ax.set_xlim(sig_xlim)
         ax0.xaxis.set_major_formatter(mdates.DateFormatter(date_formatter))
-        ax0.tick_params(axis='x',rotation=rotate_xticks)
+        ax0.set_xticklabels(ax0.get_xticklabels(),rotation=rotate_xticks,ha='right',rotation_mode='anchor')
         ax.xaxis.set_major_formatter(mdates.DateFormatter(date_formatter))
-        ax.tick_params(axis='x',rotation=rotate_xticks)
+        ax.set_xticklabels(ax.get_xticklabels(),rotation=rotate_xticks,ha='right',rotation_mode='anchor')
 
     if syn_map_data is not None:
         ax4 = fig.add_subplot(gs[-5:])
@@ -177,5 +197,5 @@ def filter_decomposition(data,
             aspect="auto",
         )
         ax4.set_xticklabels([])
-
+    plt.tight_layout()
     plt.show()
