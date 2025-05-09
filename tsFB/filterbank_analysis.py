@@ -220,7 +220,7 @@ def get_test_data(instrument = 'omni',
         catalog_fname = 'data/B_FS_PD/omni_master_catalog_1994_2023.csv'
 
     catalog = pd.read_csv(
-            catalog_fname,
+            _SRC_DIR+'/'+catalog_fname,
             index_col=0
         )
     if instrument == 'psp':
