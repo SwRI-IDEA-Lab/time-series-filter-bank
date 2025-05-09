@@ -38,11 +38,12 @@ month = '06'
 day = '01'
 test_cdf_file_path =_MODEL_DIR+fba._OMNI_MAG_DATA_DIR+ year +'/omni_hro_1min_'+ year+month+'01_v01.cdf'
 
-mag_df = fba.get_test_data(fname_full_path=test_cdf_file_path,
-                           start_date=dt.datetime(year=int(year),month=int(month),day=int(day),hour=0),
-                           end_date=dt.datetime(year=int(year),month=int(month),day=int(day)+1,hour=0))
-cols = 'BX_GSE'
-mag_df=mag_df[[cols]]
+cols = 'F'
+
+mag_df = fba.get_test_data(start_date=dt.datetime(year=int(year),month=int(month),day=int(day),hour=0),
+                           end_date=dt.datetime(year=int(year),month=int(month),day=int(day)+1,hour=0),
+                           cols=cols)
+
 mag_df
 # mag_df = mag_df-mag_df.mean()  # Include this for fair comparison of DC and/or HF true or false (if both are true, original signal can be reconstructed regardless)
 
@@ -110,25 +111,28 @@ DTSM.build_DTSM_fb(windows=[500,1000,2000,4000,8000])
 
 DTSM.add_mvgavg_DC_HF()
 bfb.visualize_filterbank(fb_matrix=DTSM.fb_matrix,
-                        fftfreq=DTSM.freq_spectrum['hertz'],
-                        xlim=(0,DTSM.center_freq[-1]))
+                        fftfreq=DTSM.freq_spectrum['sample_rate_frac'],
+                        # xlim=(0,DTSM.center_freq[-1])
+                        )
 
 # %% triangle filterbanks
 tri = bfb.filterbank(data_len=len(mag_df),
                     cadence=dt.timedelta(seconds=60))
 tri.build_triangle_fb((0.0,np.sort(DTSM.center_freq)[-1]),
-                      center_freq=np.sort(DTSM.center_freq[1:-1]))
+                      center_freq=np.sort(DTSM.center_freq[1:-1])
+                      )
 tri.add_DC_HF_filters()
 bfb.visualize_filterbank(fb_matrix=tri.fb_matrix,
-                        fftfreq=tri.freq_spectrum['hertz'],
-                        xlim=(0.0,tri.center_freq[-1]))
+                        fftfreq=tri.freq_spectrum['sample_rate_frac'],
+                        # xlim=(0.0,tri.center_freq[-1])
+                        )
 
 # %% plot all in single plot
 plt.figure(figsize=(10,5))
 for m_bank in DTSM.fb_matrix:
-    plt.plot(DTSM.freq_spectrum['hertz'],m_bank,linewidth=2)
+    plt.plot(DTSM.freq_spectrum['sample_rate_frac'],m_bank,linewidth=2)
 for t_bank in tri.fb_matrix:
-    plt.plot(tri.freq_spectrum['hertz'],t_bank,linestyle='dashdot')
+    plt.plot(tri.freq_spectrum['sample_rate_frac'],t_bank,linestyle='dashdot')
 
 plt.xlim(0.0,tri.center_freq[-1])
 plt.xlabel('Frequency (Hz)')
@@ -137,9 +141,9 @@ plt.title('Both filterbank types in single plot')
 plt.show()
 
 # %% Sum of filterbank amplitudes
-plt.plot(DTSM.freq_spectrum['hertz'],np.sum(DTSM.fb_matrix,axis=0),label=f'$\sum$ Moving Avg. filters ({DTSM.fb_matrix.shape[0]} filters)')
-plt.plot(tri.freq_spectrum['hertz'],np.sum(tri.fb_matrix,axis=0),label='$\sum$ Mel filters')
-plt.xlabel('Frequency (hz)')
+plt.plot(DTSM.freq_spectrum['sample_rate_frac'],np.sum(DTSM.fb_matrix,axis=0),label=f'$\sum$ Moving Avg. filters ({DTSM.fb_matrix.shape[0]} filters)')
+plt.plot(tri.freq_spectrum['sample_rate_frac'],np.sum(tri.fb_matrix,axis=0),label='$\sum$ Triangular filters')
+plt.xlabel('Frequency')
 plt.ylabel('Amplitude')
 plt.title('Sum of filter amplitudes across all frequencies')
 plt.legend()
