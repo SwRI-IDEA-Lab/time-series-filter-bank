@@ -195,7 +195,7 @@ if __name__ == '__main__':
     scalar_params = ['F','flow_speed']
     mag_components = ['BX_GSE','BY_GSE']
 
-    y_labs = {'scalar_params':('|B| (nT)','Speed (m/s)'),
+    y_labs = {'scalar_params':('|B| (nT)','Speed (km/s)'),
               'mag_components':('Bx (nT)','By (nT)')}
     
     res1 = (dt.datetime(year=2013,month=5,day=31,hour=12),dt.datetime(year=2013,month=6,day=3,hour=0))

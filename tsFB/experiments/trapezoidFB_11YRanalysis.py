@@ -204,7 +204,7 @@ if __name__ == '__main__':
     scalar_params = ['F','flow_speed']
     mag_components = ['BX_GSE','BY_GSE','BZ_GSE']
 
-    y_labs = {'scalar_params':['|B| (nT)','Flow Speed (m/s)'],
+    y_labs = {'scalar_params':['|B| (nT)','Flow Speed (km/s)'],
               'mag_components':['(nT)']}
 
     fb_vis.filter_decomposition(data=mag_df[scalar_params],
@@ -236,7 +236,7 @@ if __name__ == '__main__':
                                   fb_log_freq=True,
                                   fb_plot_sci_not=False)
     
-    res1 = (dt.datetime(year=2013,month=5,day=31,hour=12),dt.datetime(year=2013,month=6,day=3,hour=0))
+    res1 = (dt.datetime(year=2008,month=12,day=16,hour=0),dt.datetime(year=2008,month=12,day=18,hour=12))
 
     fb_vis.filter_decomposition(data=mag_df[scalar_params],
                                   fb_matrix=fltbnk.fb_matrix,

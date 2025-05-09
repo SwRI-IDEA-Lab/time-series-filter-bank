@@ -201,7 +201,7 @@ if __name__ == '__main__':
                                     #   fb_xlim = (0,fltbnk.edge_freq[-1]),
                                     sig_xlim=(cr_start,cr_end),
                                     y_label1='Avg. Mag Field (nT)',
-                                    y_label2='Flow Speed (m/s)',
+                                    y_label2='Flow Speed (km/s)',
                                     add_to_sig_title=f'(CR{cr_num})',
                                     center_freq = None,
                                     plot_reconstruction=False,

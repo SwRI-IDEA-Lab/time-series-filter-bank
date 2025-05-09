@@ -194,7 +194,7 @@ if __name__ == '__main__':
     scalar_params = ['F','flow_speed']
     mag_components = ['BX_GSE','BY_GSE','BZ_GSE']
 
-    y_labs = {'scalar_params':['|B| (nT)','Flow Speed (m/s)'],
+    y_labs = {'scalar_params':['|B| (nT)','Flow Speed (km/s)'],
               'mag_components':['(nT)']}
 
     # fb_vis.filter_decomposition(data=mag_df[scalar_params],
