@@ -211,7 +211,7 @@ if __name__ == '__main__':
                                   fb_matrix=fltbnk.fb_matrix,
                                   fftfreq=fltbnk.freq_spectrum['sample_rate_frac'],
                                   cadence=dt.timedelta(minutes=1),
-                                  figsize=(10,10),
+                                  figsize=(8.5,10),
                                 #   fb_xlim = (0,fltbnk.edge_freq[-1]),
                                 #   sig_xlim=(cr_start,cr_end),
                                   y_labels= y_labs['scalar_params'],
