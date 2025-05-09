@@ -208,7 +208,8 @@ def stack_subdecomp(data,
                     figsize=(4, 11),
                     gs_wspace=0.2,
                     gs_hspace=0.0,
-                    plot_filterbank=False,
+                    main_alpha = 0.5,
+                    sub_alpha = 0.7,
                     sig_xlim=None,
                     date_formatter = "%m-%d",
                     rotate_xticks = 0,
@@ -307,10 +308,12 @@ def stack_subdecomp(data,
         y_lab = y_labels[i] if y_labels is not None else (col1s[i],col2s[i])
         
         sublinewidth = 2
-        ax2.plot(x, filtered_main[col1s[i]][0], color=f_clr[0], alpha=0.5)
-        ax2.plot(x, filtered_sub[col1s[i]][0],color=f_clr[0], linewidth=sublinewidth, alpha=0.7)
-        ax21.plot(x, filtered_main[col2s[i]][0], color=f_clr[1], alpha=0.5)
-        ax21.plot(x, filtered_sub [col2s[i]][0], color=f_clr[1],linewidth=sublinewidth, alpha=0.7)
+        main_alpha = main_alpha
+        sub_alpha = sub_alpha
+        ax2.plot(x, filtered_main[col1s[i]][0], color=f_clr[0], alpha=main_alpha)
+        ax2.plot(x, filtered_sub[col1s[i]][0],color=f_clr[0], linewidth=sublinewidth, alpha=sub_alpha)
+        ax21.plot(x, filtered_main[col2s[i]][0], color=f_clr[1], alpha=main_alpha)
+        ax21.plot(x, filtered_sub [col2s[i]][0], color=f_clr[1],linewidth=sublinewidth, alpha=sub_alpha)
         
         ax2.set_ylabel(y_lab[0], color=f_clr[0])
         ax2.tick_params(axis='y',labelcolor=f_clr[0])
@@ -326,7 +329,7 @@ def stack_subdecomp(data,
             ax21.set_ylim(lim2[0],lim2[1])
 
         if i == 0:
-            ax2.set_title("Filtered Signal " + add_to_sig_title, fontsize=15)
+            ax2.set_title("Filtered Signals " + add_to_sig_title, fontsize=15)
 
         if i != len(col1s)-1:
             ax2.tick_params(labelbottom=False)
