@@ -203,6 +203,6 @@ if __name__ == '__main__':
                                   fb_xlim = (fltbnk.edge_freq[0]-0.005,fltbnk.edge_freq[-1]+0.005),
                                   y_labels=['|B| (nT)'],
                                 #   sig_xlim=(dt.datetime(year=2010,month=5,day=19),dt.datetime(year=2010,month=6,day=20)),
-                                  center_freq = fltbnk.center_freq,
+                                #   center_freq = fltbnk.center_freq,
                                 #   orig_sig_plot_title=f'{title_date_range} Original series ({col})',
                                   plot_reconstruction=False)

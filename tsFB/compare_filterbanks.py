@@ -258,6 +258,7 @@ class compare_FB:
                         abs_residual=True,
                         percent_rel_res = True,
                         res_eps = 0.01,
+                        center_freq_txtbx = True
                         ):
         if freq_units is None:
             fftfreq = self.freq_spec['hertz']
@@ -329,11 +330,12 @@ class compare_FB:
             ax2a.plot(x,fb1_sig[j])
             ax2b.plot(x,fb2_sig[j])
             # if i ==1:
-            ax2b.text(x=min(x),y=max(fb2_sig[j]),s=f'center freq = {fb_obj.center_freq[j]:.2e}',
-                    ha='right',va='top',
-                    fontsize=8,
-                    bbox=dict(facecolor='white', edgecolor='black',alpha=0.7))
-            ax2b.tick_params(labelleft=False)
+            if center_freq_txtbx:
+                ax2b.text(x=min(x),y=max(fb2_sig[j]),s=f'center freq = {fb_obj.center_freq[j]:.2e}',
+                        ha='right',va='top',
+                        fontsize=8,
+                        bbox=dict(facecolor='white', edgecolor='black',alpha=0.7))
+                ax2b.tick_params(labelleft=False)
             # ax2.set_yticks([])
             
             if j==0:
@@ -415,4 +417,5 @@ if __name__ == '__main__':
                                      percent_rel_res=True,
                                      abs_residual=args['absolute_residual'],
                                      res_eps=args['residual_epsilon'],
-                                     gs_hspace=1.2)
+                                     gs_hspace=1.2,
+                                     center_freq_txtbx=False)
