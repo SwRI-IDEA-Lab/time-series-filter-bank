@@ -164,7 +164,7 @@ if __name__ == '__main__':
                                           data_cadence=dt.timedelta(minutes=1))
 
     # frequencies based on windows
-    windows = [dt.timedelta(days=365*0.5),dt.timedelta(days=5),dt.timedelta(days=1),dt.timedelta(hours=20)]
+    windows = [dt.timedelta(days=365*0.5),dt.timedelta(days=5),dt.timedelta(days=1),dt.timedelta(hours=18)]
     cntr_freq = [fb.time_window_to_npt_freq(w,data_cadence=dt.timedelta(minutes=1)) for w in windows]
     
     # variable for 1 day
