@@ -226,25 +226,27 @@ if __name__ == '__main__':
     #                               fb_log_freq=True,
     #                               fb_plot_sci_not=False)
     
-    res1 = (dt.datetime(year=2013,month=5,day=31,hour=12),dt.datetime(year=2013,month=6,day=3,hour=0))
+    
+    # res1 = (dt.datetime(year=2008,month=12,day=16,hour=0),dt.datetime(year=2008,month=12,day=18,hour=12))
 
-    fb_vis.filter_decomposition(data=mag_df[scalar_params],
-                                  fb_matrix=fltbnk.fb_matrix,
-                                  fftfreq=fltbnk.freq_spectrum['sample_rate_frac'],
-                                  cadence=dt.timedelta(minutes=1),
-                                  figsize=(8.5,10),
-                                  plot_filterbank=False,
-                                #   fb_xlim = (0,fltbnk.edge_freq[-1]),
-                                  sig_xlim= res1,
-                                  y_labels= y_labs['scalar_params'],
-                                  HR_ylim=[(-10,10),(-150,150)],
-                                  HRp1_ylim=True,
-                                  date_formatter="%m-%d %H:%M",
-                                  rotate_xticks=25,
-                                  center_freq = None,
-                                  plot_reconstruction=False,
-                                  fb_log_freq=True,
-                                  fb_plot_sci_not=False)
+    # fb_vis.filter_decomposition(data=mag_df[scalar_params],
+    #                               fb_matrix=fltbnk.fb_matrix,
+    #                               fftfreq=fltbnk.freq_spectrum['sample_rate_frac'],
+    #                               cadence=dt.timedelta(minutes=1),
+    #                               figsize=(8.5,10),
+    #                               plot_filterbank=False,
+    #                             #   fb_xlim = (0,fltbnk.edge_freq[-1]),
+    #                               sig_xlim= res1,
+    #                               y_labels= y_labs['scalar_params'],
+    #                               HR_ylim=[(-5,5),(-25,25)],
+    #                               HRp1_ylim=True,
+    #                               date_formatter="%m-%d %H:%M",
+    #                               rotate_xticks=25,
+    #                               center_freq = None,
+    #                               plot_reconstruction=False,
+    #                               fb_log_freq=True,
+    #                               fb_plot_sci_not=False)
+    
     
     # fb_vis.filter_decomposition(data=mag_df[mag_components],
     #                               fb_matrix=fltbnk.fb_matrix,
@@ -287,7 +289,7 @@ if __name__ == '__main__':
                                   fftfreq=fltbnk.freq_spectrum['sample_rate_frac'],
                                   cadence=dt.timedelta(minutes=1),
                                   figsize=(8.5,10),
-                                  plot_filterbank=False,
+                                  plot_filterbank=True,
                                 #   fb_xlim = (0,fltbnk.edge_freq[-1]),
                                   sig_xlim=final_res,
                                   y_labels=['BX (nT)','BY (nT)'],
@@ -295,7 +297,7 @@ if __name__ == '__main__':
                                   HR_ylim=[(-10,10),(-15,15)],
                                   HRp1_ylim=True,
                                   date_formatter="%m-%d %H:%M",
-                                  rotate_xticks=15,
+                                  rotate_xticks=10,
                                   center_freq = None,
                                   plot_reconstruction=False,
                                   fb_log_freq=True,
