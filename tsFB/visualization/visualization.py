@@ -35,6 +35,7 @@ def filter_decomposition(data,
                          plot_filterbank=True,
                          fb_xlim=None,
                          sig_xlim=None,
+                         ylim_eps = 5,
                          date_formatter = "%m-%d",
                          rotate_xticks = 0,
                          y_labels:list=None,
@@ -73,6 +74,8 @@ def filter_decomposition(data,
         col = data.columns[0]
         ax0.plot(data[col], color="black", label="original")
         ax0.set_ylabel(y_labels[0] if y_labels else col)
+        if sig_xlim is not None:
+            ax0.set_ylim(min(data[col][sig_xlim[0]:sig_xlim[1]])-ylim_eps,max(data[col][sig_xlim[0]:sig_xlim[1]])+ylim_eps)
     elif data.shape[1] == 2:
         col1, col2 = data.columns
         ax01 = ax0.twinx()
@@ -84,15 +87,25 @@ def filter_decomposition(data,
             c2 = 'red'
         ax0.plot(data[col1], alpha=0.9, color=c1)
         ax01.plot(data[col2], alpha=0.7, color=c2)
+
         ax0.set_ylabel(y_labels[0] if y_labels else col1, color=c1)
         ax0.tick_params(axis="y", labelcolor=c1)
         ax01.set_ylabel(y_labels[1] if y_labels else col2, color=c2)
         ax01.tick_params(axis="y", labelcolor=c2)
+
+        if sig_xlim:
+            sig_zoom1 = data[col1][sig_xlim[0]:sig_xlim[1]]
+            sig_zoom2 = data[col2][sig_xlim[0]:sig_xlim[1]]
+            ax0.set_ylim(min(sig_zoom1)-abs(np.mean(sig_zoom1)/8),max(sig_zoom1)+abs(np.mean(sig_zoom1)/8))
+            ax01.set_ylim(min(sig_zoom2)-abs(np.mean(sig_zoom2)/8),max(sig_zoom2)+abs(np.mean(sig_zoom2)/8))
     else:
         for col in data.columns:
             ax0.plot(data[col],alpha=0.75,label=col)
+            if sig_xlim is not None:
+                ax0.set_ylim(min(data[col][sig_xlim[0]:sig_xlim[1]])-ylim_eps,max(data[col][sig_xlim[0]:sig_xlim[1]])+ylim_eps)
         ax0.legend()
         ax0.set_ylabel(y_labels[0])
+        
     ax0.set_title(orig_sig_plot_title)
     ax0.grid(True)
     last_gs = 3
@@ -220,12 +233,16 @@ def stack_subdecomp(data,
     x = data.index
     orig_sig_plot_title = f"Original Signal [{x[0].strftime('%Y-%m-%d')} to {x[-1].strftime('%Y-%m-%d')}] {add_to_sig_title}"
     if sig_xlim is not None:
-        orig_sig_plot_title = f"Original Signal [{sig_xlim[0].strftime('%Y-%m-%d')} to {sig_xlim[-1].strftime('%Y-%m-%d')}] {add_to_sig_title}"
+        if dt.timedelta(seconds=(sig_xlim[-1]-sig_xlim[0]).total_seconds()).days <= 1:
+            orig_sig_plot_title = f'Original Signal [{sig_xlim[0].strftime('%Y-%m-%d')}]'
+        else:
+            orig_sig_plot_title = f"Original Signal [{sig_xlim[0].strftime('%Y-%m-%d')} to {sig_xlim[-1].strftime('%Y-%m-%d')}] {add_to_sig_title}"
     
     assert len(data.columns) % 2 ==0, "Even number of columns needed (Note: you can have the same data column twice to plot just one parameter in a single plot)"
 
     # Gridspec setup
-    total_gs_rows =  len(data.columns) + 1 + len(data.columns)
+    cushion = 2 if len(data.columns) > 6 else 1
+    total_gs_rows =  len(data.columns) + cushion + len(data.columns)
     fig = plt.figure(figsize=figsize)
     gs = gridspec.GridSpec(ncols = 1, 
                            nrows = total_gs_rows, 
@@ -267,6 +284,16 @@ def stack_subdecomp(data,
             ax0.xaxis.set_major_formatter(mdates.DateFormatter(date_formatter))
             ax0.set_xticklabels(ax0.get_xticklabels(),rotation=rotate_xticks,ha='right',rotation_mode='anchor')
 
+            sig_zoom1 = data[col1s[i]][sig_xlim[0]:sig_xlim[1]]
+            if len(sig_zoom1.shape)>1:
+                sig_zoom1 = sig_zoom1.iloc[:,0]
+            sig_zoom2 = data[col2s[i]][sig_xlim[0]:sig_xlim[1]]
+            if len(sig_zoom2.shape)>1:
+                sig_zoom2 = sig_zoom2.iloc[:,0]
+            ax0.set_ylim(min(sig_zoom1)-abs(np.mean(sig_zoom1)/8),max(sig_zoom1)+abs(np.mean(sig_zoom1)/8))
+            ax01.set_ylim(min(sig_zoom2)-abs(np.mean(sig_zoom2)/8),max(sig_zoom2)+abs(np.mean(sig_zoom2)/8))
+
+
         if i != len(col1s)-1:
             ax0.tick_params(labelbottom=False)
 
@@ -299,7 +326,7 @@ def stack_subdecomp(data,
         clr2 = cp[1]
         f_colors.append((f'xkcd:{clr1}',f'xkcd:{clr2}'))
 
-    last_gs +=1
+    last_gs += 2 if len(data.columns) > 6 else 1
     for i in range(len(col1s)):
         ax2 = fig.add_subplot(gs[last_gs : last_gs + 2], sharex=ax0)
         ax21 = ax2.twinx()
