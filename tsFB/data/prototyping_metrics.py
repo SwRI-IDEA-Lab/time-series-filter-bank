@@ -468,11 +468,12 @@ def read_OMNI_dataset(fname,
     # TODO: (JK) Implement long-term solution to repalce fill values with NaNs respective to each parameter 
     # (so far these are just values of parameters used thus far)
     fill_values = {'F':9999.99,                 # Avg. Magnetic Field (Magnitude)
-                   'BX_GSE':9999.99,              # BX
-                   'BY_GSE':9999.99,              # BY
-                   'BZ_GSE':9999.99,              # BZ
+                   'BX_GSE':9999.99,            # BX
+                   'BY_GSE':9999.99,            # BY
+                   'BZ_GSE':9999.99,            # BZ
                    'flow_speed':99999.9,        # wind speed
-                   'proton_density':999.99}     # 'proton_density
+                   'proton_density':999.99,     # proton_density
+                   'T':9999999.,}               # plasma temperature    
     
     for key,value in fill_values.items():
         if key in cols:
