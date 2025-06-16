@@ -255,6 +255,7 @@ class compare_FB:
                         gs_wspace = 0.1,
                         gs_hspace = 0.3,
                         orig_sig_plot_title='Original Signal',
+                        plot_filterbank = True,
                         abs_residual=True,
                         percent_rel_res = True,
                         res_eps = 0.01,
@@ -274,6 +275,7 @@ class compare_FB:
         y = self.data
 
         fig = plt.figure(figsize=figsize)
+        gs_fb = 2 if plot_filterbank else 0
         gs = gridspec.GridSpec(ncols = 1, nrows = self.n_filters+3,
                             figure = fig,
                             wspace=gs_wspace, hspace=gs_hspace)
@@ -291,25 +293,28 @@ class compare_FB:
         for i, fb_name in enumerate(self.fb_analysis.keys()):
             fltrbnk = self.fb_analysis[fb_name]
             fb_obj = self.fb_analysis[fb_name]['fb_object']
+            last_gs = 0
             # Filterbank plot=====================================================
-            xlim = (fb_obj.center_freq[0],fb_obj.center_freq[-1])
-            ax = fig.add_subplot(two_col_gs[0:2,i])  
-            ax.plot(fftfreq, fltrbnk['fb_matrix'].T)
-            ax.grid(True)
-            ax.set_xlabel('Frequency (Hz)')
-            ax.set_xlim(xlim)
-            ax.set_title(fb_name)
-            ax.set_xticks(fb_obj.center_freq)
-            ax.tick_params(rotation=35,labelsize=8,axis='x')
-            ax.ticklabel_format(style='sci',scilimits=(0,0),axis='x')
-            if i==1:
-                ax.tick_params(labelleft=False)
+            if plot_filterbank:
+                xlim = (fb_obj.center_freq[0],fb_obj.center_freq[-1])
+                ax = fig.add_subplot(two_col_gs[0:2,i])  
+                ax.plot(fftfreq, fltrbnk['fb_matrix'].T)
+                ax.grid(True)
+                ax.set_xlabel('Frequency (Hz)')
+                ax.set_xlim(xlim)
+                ax.set_title(fb_name)
+                ax.set_xticks(fb_obj.center_freq)
+                ax.tick_params(rotation=35,labelsize=8,axis='x')
+                ax.ticklabel_format(style='sci',scilimits=(0,0),axis='x')
+                if i==1:
+                    ax.tick_params(labelleft=False)
+                last_gs+=5
             
 
             # Reconstruction & Decomposition======================================
             
             # Plot Reconstruction-------------------------------------------------
-            ax1 = fig.add_subplot(two_col_gs[5:7,i],sharex=ax0,sharey=ax0)
+            ax1 = fig.add_subplot(two_col_gs[last_gs:last_gs+2,i],sharex=ax0,sharey=ax0)
             ax1.plot(x,fltrbnk['reconstruction'],color='darkblue')
             ax1.set_title(fb_name+' Signal Reconstruction')
             ax1.set_xticklabels(ax1.get_xticklabels(),rotation=20,ha='right',rotation_mode='anchor')
@@ -317,15 +322,15 @@ class compare_FB:
             # ax1.tick_params(labelbottom=False)
             if i ==1:
                 ax1.tick_params(labelleft=False)
-
+            last_gs+=2
             # Plot Decomposition--------------------------------------------------
         for j in range(len(fltrbnk['filtered_sigs'])):
             fb1,fb2 = self.fb_analysis.keys()
             fb1_sig = self.fb_analysis[fb1]['filtered_sigs']
             fb2_sig = self.fb_analysis[fb2]['filtered_sigs']
 
-            ax2a = fig.add_subplot(two_col_gs[2*j+9:2*j+11,0],sharex=ax1)
-            ax2b = fig.add_subplot(two_col_gs[2*j+9:2*j+11,1],sharex=ax1,sharey=ax2a)  
+            ax2a = fig.add_subplot(two_col_gs[2*j+last_gs+2:2*j+last_gs+4,0],sharex=ax1)
+            ax2b = fig.add_subplot(two_col_gs[2*j+last_gs+2:2*j+last_gs+4,1],sharex=ax1,sharey=ax2a)  
 
             ax2a.plot(x,fb1_sig[j])
             ax2b.plot(x,fb2_sig[j])
@@ -415,6 +420,7 @@ if __name__ == '__main__':
         comp_anly.compare_decomp(orig_sig_plot_title=f'[{args["start_year"]}-{args['start_month']}-{args['start_day']}] Original series ({'B_mag' if col=='F' else col})',
                                      figsize=(8.5,11),
                                      percent_rel_res=True,
+                                     plot_filterbank=False,
                                      abs_residual=args['absolute_residual'],
                                      res_eps=args['residual_epsilon'],
                                      gs_hspace=1.2,
