@@ -43,6 +43,7 @@ def filter_decomposition(data,
                          HR_ylim = None,
                          HRp1_ylim:bool=False,
                          center_freq=None,
+                         decomp_labels:list=None,
                          filterbank_plot_title="Filter bank",
                          add_to_sig_title="",
                          fb_freq_units="",
@@ -113,7 +114,7 @@ def filter_decomposition(data,
     # Filterbank plot
     if plot_filterbank:
         ax1 = fig.add_subplot(gs[last_gs : last_gs + 1])
-        ax1.plot(fftfreq, fb_matrix.T)
+        ax1.plot(fftfreq, fb_matrix.T,label=decomp_labels)
         if fb_xlim:
             ax1.set_xlim(fb_xlim)
         if fb_log_freq:
@@ -121,6 +122,10 @@ def filter_decomposition(data,
             fb_freq_units += " [log scaled]"
         ax1.set_xlabel("Frequency" + fb_freq_units)
         ax1.set_title(filterbank_plot_title)
+        ax1.legend(bbox_to_anchor=(0.92, 1.58),
+                         loc='upper left', 
+                         borderaxespad=0.,
+                         fontsize=8.5)
         ax1.grid(True)
         if fb_plot_sci_not:
             ax1.ticklabel_format(style="sci", scilimits=(0, 0), axis="x")
@@ -184,9 +189,15 @@ def filter_decomposition(data,
 
 
         if center_freq is not None:
-                ax.text(x=min(x), y=max(filtered[col][i]), s=f"center freq = {center_freq[i]:.2e}",
-                        ha="left", va="top", fontsize=8,
+                ax.text(x=0.99, y=0.95, s=f"center freq = {center_freq[i]:.2e}",
+                        transform=ax.transAxes, ha="left", va="top", fontsize=8,
                         bbox=dict(facecolor="white", edgecolor="black", alpha=0.7))
+        if decomp_labels is not None:
+                assert len(decomp_labels) == fb_matrix.shape[0], "Please provide list of decomp_labels equal to number of filters in fb_matrix"
+                ax.text(x=0.99, y=0.95, s=decomp_labels[i],transform=ax.transAxes,
+                        ha="right", va="top", fontsize=10,fontweight='bold',
+                        bbox=dict(facecolor="lightgrey", edgecolor="black", alpha=0.9))
+        
         ax.grid(True)
         if i == 0:
             ax.set_title("Signal decomposition " + add_to_sig_title, fontsize=15)
