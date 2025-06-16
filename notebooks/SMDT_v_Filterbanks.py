@@ -4,6 +4,7 @@ import pandas as pd
 from numpy import abs
 import numpy as np
 import matplotlib.pyplot as plt
+import matplotlib.lines as Line2D
 
 from scipy import fft
 from sklearn.metrics import r2_score
@@ -22,6 +23,7 @@ import tsFB.data.prototyping_metrics as pm
 import tsFB.utils.time_chunking as tc
 import tsFB.build_filterbanks as bfb
 import tsFB.filterbank_analysis as fba
+import tsFB.visualization.visualization as fb_vis
 
 # optional
 import warnings
@@ -42,7 +44,7 @@ cols = 'F'
 
 mag_df = fba.get_test_data(start_date=dt.datetime(year=int(year),month=int(month),day=int(day),hour=0),
                            end_date=dt.datetime(year=int(year),month=int(month),day=int(day)+1,hour=0),
-                           cols=cols)
+                           cols=[cols])
 
 mag_df
 # mag_df = mag_df-mag_df.mean()  # Include this for fair comparison of DC and/or HF true or false (if both are true, original signal can be reconstructed regardless)
@@ -105,7 +107,7 @@ mag_df.interpolate(method='index', kind='linear',limit_direction='both',inplace=
 # # Create Frequency Domain Filterbanks
 
 # %% Moving average filterbanks
-DTSM = bfb.filterbank(data_len=len(mag_df),
+DTSM = bfb.filterbank(data_len=len(mag_df[cols]),
                     cadence=dt.timedelta(seconds=60))
 DTSM.build_DTSM_fb(windows=[500,1000,2000,4000,8000])
 
@@ -116,7 +118,7 @@ bfb.visualize_filterbank(fb_matrix=DTSM.fb_matrix,
                         )
 
 # %% triangle filterbanks
-tri = bfb.filterbank(data_len=len(mag_df),
+tri = bfb.filterbank(data_len=len(mag_df[cols]),
                     cadence=dt.timedelta(seconds=60))
 tri.build_triangle_fb((0.0,np.sort(DTSM.center_freq)[-1]),
                       center_freq=np.sort(DTSM.center_freq[1:-1])
@@ -128,16 +130,26 @@ bfb.visualize_filterbank(fb_matrix=tri.fb_matrix,
                         )
 
 # %% plot all in single plot
-plt.figure(figsize=(10,5))
-for m_bank in DTSM.fb_matrix:
-    plt.plot(DTSM.freq_spectrum['sample_rate_frac'],m_bank,linewidth=2)
-for t_bank in tri.fb_matrix:
-    plt.plot(tri.freq_spectrum['sample_rate_frac'],t_bank,linestyle='dashdot')
+import matplotlib as mpl
 
-plt.xlim(0.0,tri.center_freq[-1])
-plt.xlabel('Frequency (Hz)')
+cmap = mpl.color_sequences['tab10']
+plt.figure(figsize=(10,5))
+for i,m_bank in enumerate(DTSM.fb_matrix):
+    plt.plot(DTSM.freq_spectrum['sample_rate_frac'],m_bank,linestyle='dashdot',linewidth=2,c=cmap[i])
+for i,t_bank in enumerate(tri.fb_matrix):
+    plt.plot(tri.freq_spectrum['sample_rate_frac'],t_bank,c=cmap[i])
+
+# lines = [Line2D([0],[0],linestyle='dashdot'),
+#          Line2D([0],[0],linestyle='solid')]
+
+# plt.legend(lines,['Moving Avg.','Triangular'])
+
+# plt.xlim(0.0,tri.center_freq[-1])
+# plt.xlim(0.0,0.18)
+plt.xlim(0.0,tri.freq_spectrum['sample_rate_frac'][tri.center_freq_idx[-1]])
+plt.xlabel('Frequency')
 plt.grid()
-plt.title('Both filterbank types in single plot')
+# plt.title('Both filterbank types in single plot')
 plt.show()
 
 # %% Sum of filterbank amplitudes
@@ -158,40 +170,40 @@ DTSM_filtered = fba.get_filtered_signals(data=mag_df[cols],
                                          fb_matrix=DTSM.fb_matrix,
                                          fftfreq=DTSM.freq_spectrum['hertz'],
                                          cadence=dt.timedelta(minutes=1))
-fba.view_filter_decomposition(data=mag_df[cols],
-                            fb_matrix=DTSM.fb_matrix,
-                            fftfreq=DTSM.freq_spectrum['hertz'],
-                            cadence=dt.timedelta(minutes=1),
-                            xlim = (0,DTSM.center_freq[-1]),
-                            center_freq = DTSM.center_freq,
-                            filterbank_plot_title='Moving Average Filter Bank',
-                            orig_sig_plot_title=f'[{year}-{month}-{day}] Original Signal ({cols})',
-                            plot_reconstruction=True,
-                            plot_direct_residual=True,
-                            plot_rel_residual=True,
-                            percent_rel_res=True,
-                            abs_residual=True,
-                            res_eps=0.05)
+# fba.view_filter_decomposition(data=mag_df[cols],
+#                             fb_matrix=DTSM.fb_matrix,
+#                             fftfreq=DTSM.freq_spectrum['hertz'],
+#                             cadence=dt.timedelta(minutes=1),
+#                             xlim = (0,DTSM.center_freq[-1]),
+#                             center_freq = DTSM.center_freq,
+#                             filterbank_plot_title='Moving Average Filter Bank',
+#                             orig_sig_plot_title=f'[{year}-{month}-{day}] Original Signal ({cols})',
+#                             plot_reconstruction=True,
+#                             plot_direct_residual=True,
+#                             plot_rel_residual=True,
+#                             percent_rel_res=True,
+#                             abs_residual=True,
+#                             res_eps=0.05)
 
 # %%
 tri_filtered = fba.get_filtered_signals(data=mag_df[cols],
                                         fb_matrix=tri.fb_matrix,
                                         fftfreq=tri.freq_spectrum['hertz'],
                                         cadence=dt.timedelta(minutes=1))
-fba.view_filter_decomposition(data=mag_df[cols],
-                            fb_matrix=tri.fb_matrix,
-                            fftfreq=tri.freq_spectrum['hertz'],
-                            cadence=dt.timedelta(minutes=1),
-                            xlim = (0,tri.center_freq[-1]),
-                            center_freq = tri.center_freq,
-                            filterbank_plot_title='Mel Filter bank',
-                            orig_sig_plot_title=f'[{year}-{month}-{day}] Original Signal ({cols})',
-                            plot_reconstruction=True,
-                            plot_direct_residual=True,
-                            plot_rel_residual=True,
-                            percent_rel_res=True,
-                            abs_residual=True,
-                            res_eps=0.05)
+# fba.view_filter_decomposition(data=mag_df[cols],
+#                             fb_matrix=tri.fb_matrix,
+#                             fftfreq=tri.freq_spectrum['hertz'],
+#                             cadence=dt.timedelta(minutes=1),
+#                             xlim = (0,tri.center_freq[-1]),
+#                             center_freq = tri.center_freq,
+#                             filterbank_plot_title='Mel Filter bank',
+#                             orig_sig_plot_title=f'[{year}-{month}-{day}] Original Signal ({cols})',
+#                             plot_reconstruction=True,
+#                             plot_direct_residual=True,
+#                             plot_rel_residual=True,
+#                             percent_rel_res=True,
+#                             abs_residual=True,
+#                             res_eps=0.05)
 
 # %% [markdown]
 # ## "bank" of filtered signals from applying smoothing & detrending in time domain
@@ -201,21 +213,21 @@ convolution_filtered = np.zeros(DTSM_filtered.shape)
 DTSM.windows.sort(reverse=True)
 for i,w in enumerate(DTSM.windows[:-1]):
     filtered = tc.preprocess_smooth_detrend(mag_df=mag_df,
-                                            cols=cols,
+                                            cols=[cols],
                                             detrend_window=dt.timedelta(seconds=w),
                                             smooth_window=dt.timedelta(seconds=DTSM.windows[i+1]))
     convolution_filtered[i+1] = np.array(filtered).ravel()
 # DC
 if DTSM.DC:
     DC_filtered = tc.preprocess_smooth_detrend(mag_df=mag_df,
-                                            cols=cols,
+                                            cols=[cols],
                                             detrend_window=dt.timedelta(seconds=0),
                                             smooth_window=dt.timedelta(seconds=max(DTSM.windows)))
     convolution_filtered[0] = np.array(DC_filtered).ravel()
 # HF
 if DTSM.HF:
     HF_filtered = tc.preprocess_smooth_detrend(mag_df=mag_df,
-                                            cols=cols,
+                                            cols=[cols],
                                             detrend_window=dt.timedelta(seconds=min(DTSM.windows)),
                                             smooth_window=dt.timedelta(seconds=0))
     convolution_filtered[-1] = np.array(HF_filtered).ravel()
@@ -235,17 +247,17 @@ sum_conv_filtered = np.sum(convolution_filtered,axis=0)
 
 # %% calculate r-squared scores
 # TODO: these scores may not be that useful, so can probably get rid of them
-real = np.array(mag_df).ravel()
+real = np.array(mag_df[cols]).ravel()
 DTSM_r2 = r2_score(real,sum_DTSM_filtered)
 tri_r2 = r2_score(real,sum_tri_filtered)
 conv_r2 = r2_score(real,sum_conv_filtered)
 
 # %% Plot Original vs. Convolution vs. Triangles
 plt.figure(figsize=(10,5))
-plt.plot(mag_df.index,real,color='black',label='original data')
-# plt.plot(mag_df.index,sum_conv_filtered,linestyle='dashed',label=f'Convolution reconstruction ($R^2$: {conv_r2:.2f})')
-plt.plot(mag_df.index,sum_DTSM_filtered,color='tab:orange',alpha=0.7,label=f'DTSM reconstruction ($R^2$:{DTSM_r2:.2e})')
-plt.plot(mag_df.index,sum_tri_filtered,color='tab:green',linestyle='dotted',alpha=0.5,label=f'triangle reconstruction ($R^2$: {tri_r2:.2f})')
+plt.plot(mag_df[cols].index,real,color='black',label='original data')
+# plt.plot(mag_df[cols].index,sum_conv_filtered,linestyle='dashed',label=f'Convolution reconstruction ($R^2$: {conv_r2:.2f})')
+plt.plot(mag_df[cols].index,sum_DTSM_filtered,color='tab:orange',alpha=0.7,label=f'DTSM reconstruction ($R^2$:{DTSM_r2:.2e})')
+plt.plot(mag_df[cols].index,sum_tri_filtered,color='tab:green',linestyle='dotted',alpha=0.5,label=f'triangle reconstruction ($R^2$: {tri_r2:.2f})')
 plt.title('Compare reconstructed signals directly with original')
 plt.xlabel('Date & Time (MM-DD-HH)')
 plt.ylabel('Magnetic field (nT)')
@@ -324,7 +336,7 @@ rel_residuals = {'DTSM':DTSM_rel_residual,
 # %% Plot relative residuals
 plt.figure(figsize=(10,5))
 for i,selection in enumerate(['DTSM','Convolution','Triangles']):
-    plt.plot(mag_df.index,rel_residuals[selection],
+    plt.plot(mag_df[cols].index,rel_residuals[selection],
              label=f'{selection}')
     plt.legend()
 plt.xlabel('Index')
@@ -332,3 +344,57 @@ plt.ylabel('Relative Residual (%)')
 plt.title('Relative Residual of reconstructed signals compared with original data signal')
 plt.grid()
 plt.show()
+
+# %%
+fig, axes = plt.subplots(nrows=3,ncols=1,figsize=(8,10),height_ratios=[1,2,1],sharex=True)
+axes[0].plot(DTSM.freq_spectrum['sample_rate_frac'],DTSM.fb_matrix.T)
+axes[0].set_title('Moving Average Filters',y=1.0,pad=-14,
+                            fontsize=11,
+                            bbox=dict(facecolor='white', edgecolor='black',alpha=0.9))
+axes[0].grid()
+axes[1].plot(DTSM.freq_spectrum['sample_rate_frac'],np.sum(DTSM.fb_matrix,axis=0),label=f'$\sum$ Moving Avg. filters')
+axes[1].plot(tri.freq_spectrum['sample_rate_frac'],np.sum(tri.fb_matrix,axis=0),label='$\sum$ Triangular filters')
+# axes[1].set_xlabel('Frequency')
+axes[1].set_ylabel('Amplitude')
+axes[1].set_title('Sum of filter amplitudes across all frequencies',y=1.0,pad=-14,
+                            fontsize=11,
+                            bbox=dict(facecolor='white', edgecolor='black',alpha=0.9))
+axes[1].legend(bbox_to_anchor=(0.65, 0.9),
+                         loc='upper left', )
+axes[1].grid()
+axes[2].plot(tri.freq_spectrum['sample_rate_frac'],tri.fb_matrix.T)
+axes[2].set_title('Triangular Filters',y=1.0,pad=-14,
+                            fontsize=11,
+                            bbox=dict(facecolor='white', edgecolor='black',alpha=0.9))
+axes[2].grid()
+plt.subplots_adjust(hspace=0)
+plt.xlabel('Frequency')
+
+# %%
+fig, axes = plt.subplots(nrows=3,ncols=1,figsize=(8,10),height_ratios=[1,1,2],sharex=True)
+axes[0].plot(DTSM.freq_spectrum['sample_rate_frac'],DTSM.fb_matrix.T)
+axes[0].set_title('Moving Average Filters',y=1.0,pad=-14,
+                            fontsize=11,
+                            bbox=dict(facecolor='white', edgecolor='black',alpha=0.9))
+axes[0].grid()
+
+
+axes[1].plot(tri.freq_spectrum['sample_rate_frac'],tri.fb_matrix.T)
+axes[1].set_title('Triangular Filters',y=1.0,pad=-14,
+                            fontsize=11,
+                            bbox=dict(facecolor='white', edgecolor='black',alpha=0.9))
+axes[1].grid()
+
+axes[2].plot(DTSM.freq_spectrum['sample_rate_frac'],np.sum(DTSM.fb_matrix,axis=0),label=f'$\sum$ Moving Avg. filters')
+axes[2].plot(tri.freq_spectrum['sample_rate_frac'],np.sum(tri.fb_matrix,axis=0),label='$\sum$ Triangular filters')
+
+axes[2].set_ylabel('Amplitude')
+axes[2].set_title('Sum of filter amplitudes across all frequencies',y=1.0,pad=-14,
+                            fontsize=11,
+                            bbox=dict(facecolor='white', edgecolor='black',alpha=0.9))
+axes[2].legend(bbox_to_anchor=(0.65, 0.9),
+                         loc='upper left', )
+axes[2].grid()
+plt.subplots_adjust(hspace=0)
+plt.xlabel('Frequency')
+# %%
