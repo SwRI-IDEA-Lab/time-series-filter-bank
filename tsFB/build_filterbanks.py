@@ -4,6 +4,7 @@ import matplotlib.pyplot as plt
 import matplotlib.gridspec as gridspec
 
 import dill as pickle
+# import pickle
 
 import datetime as dt
 import os,sys
@@ -133,44 +134,47 @@ def time_window_to_npt_freq(window:dt.timedelta,
 
 class filterbank:
     def __init__(self,
-                 data_len:int,
+                 data_len:int=None,
                  cadence = dt.timedelta(seconds=60),
                  restore_from_file:str = None):
-        self.data_len = data_len
-        self.cadence = cadence
-        # frequency spectrum (based on data length)----------------------------------------
-        freq_sample_num = np.linspace(0.0,data_len//2,(data_len//2)+1).astype(np.int64)
-        freq_sample_rate = freq_sample_num/data_len
-        freq_natural = freq_sample_rate*2*np.pi
-        if cadence is not None:
-            freq_hz = freq_sample_num/(data_len*cadence.total_seconds())
-        else:
-            freq_hz = None
-
-        self.freq_spectrum = {'sample_number':freq_sample_num,
-                              'sample_rate_frac':freq_sample_rate,
-                              'natural_frequency':freq_natural,
-                              'hertz':freq_hz
-                              }
-
-        # placeholders---------------------------------------------------------------------
-        self.fb_type = None
-        self.fb_matrix = None
-        self.edge_freq = None
-        self.center_freq_idx = []
-        # TODO: apply better SWE practice of using underscores for encapsulation of attributes
-        self.DC = False
-        self.HF = False
-
         # TODO: fix "restore_from_file"
-        # if restore_from_file is not None:
-        #     pkl = open(restore_from_file,'rb')
-        #     fb_dict = pickle.load(pkl)
-        #     self.fb_matrix = fb_dict['fb_matrix']
-        #     self.fftfreq = fb_dict['fftfreq']
-        #     self.edge_freq = fb_dict['edge_freq']
-        #     self.DC = fb_dict['DC']
-        #     self.HF = fb_dict['HF']
+        if restore_from_file is not None:
+            fb_dict = pickle.load(open(restore_from_file,'rb'))
+            self.fb_matrix = fb_dict['fb_matrix']
+            self.freq_spectrum = fb_dict['freq_spectrum']
+            self.edge_freq = fb_dict['edge_freq']
+            self.vrtx_idx = fb_dict['edge_freq_idx']
+            self.data_len = fb_dict['data_len']
+            self.cadence = dt.timedelta(seconds=fb_dict['cadence'])
+            self.DC = fb_dict['DC']
+            self.HF = fb_dict['HF']
+        else:
+            self.data_len = data_len
+            self.cadence = cadence
+            # frequency spectrum (based on data length)----------------------------------------
+            freq_sample_num = np.linspace(0.0,data_len//2,(data_len//2)+1).astype(np.int64)
+            freq_sample_rate = freq_sample_num/data_len
+            freq_natural = freq_sample_rate*2*np.pi
+            if cadence is not None:
+                freq_hz = freq_sample_num/(data_len*cadence.total_seconds())
+            else:
+                freq_hz = None
+
+            self.freq_spectrum = {'sample_number':freq_sample_num,
+                                'sample_rate_frac':freq_sample_rate,
+                                'natural_frequency':freq_natural,
+                                'hertz':freq_hz
+                                }
+
+            # placeholders---------------------------------------------------------------------
+            self.fb_type = None
+            self.fb_matrix = None
+            self.edge_freq = None
+            self.center_freq_idx = []
+            self.vrtx_idx = []
+            # TODO: apply better SWE practice of using underscores for encapsulation of attributes
+            self.DC = False
+            self.HF = False
 
     def update_center_freq_idx(self,
                                freq_units = 'hertz'):
@@ -183,7 +187,78 @@ class filterbank:
 
         if not np.array_equiv(current_lst,update_lst):
             self.center_freq_idx = update_lst
+    
+    def update_vertices_idx(self,
+                            freq_units = 'hertz'):
+        spect = self.freq_spectrum[freq_units]
 
+        # check vertices list (relevant to both triangle and trapezoidal filter banks)
+        vrtx_current = self.vrtx_idx
+        
+        update_lst = []
+        for k in self.edge_freq:
+            update_lst.append(np.argmin(np.abs(spect-k)))   # find index of nearest value of each vertex
+
+        if not np.array_equiv(vrtx_current,update_lst):
+            self.vrtx_idx = update_lst
+
+    # def update_vertices_lists(self,
+    #                     freq_units = 'hertz'):
+        
+    #     spect = self.freq_spectrum[freq_units]
+
+    #     self.update_vertices_idx(freq_units=freq_units)
+
+    #     if self.fb_type == 'triangle':
+    #         # check lower vertex list
+    #         lower_current = self.lower_idx
+
+    #         if self.HF:
+    #             update_lower = self.vrtx_idx[:-1]
+    #         else:
+    #             update_lower = self.vrtx_idx[:-2]
+
+    #         if not np.array_equiv(lower_current,update_lower):
+    #             self.lower_idx = update_lower
+
+    #         # check upper vertex list
+    #         upper_current = self.upper_idx
+
+    #         if self.DC:
+    #             update_upper = self.vrtx_idx[1:]
+    #         else:
+    #             update_upper = self.vrtx_idx[2:]
+
+    #         if not np.array_equiv(upper_current,update_upper):
+    #             self.upper_idx = update_upper
+
+    #         # check center vertex frequencies list
+    #         center_current = self.center_freq_idx
+    #         update_center = self.vrtx_idx[1:-1]
+
+    #         if self.DC:
+    #             np.insert(update_center,0,self.vrtx_idx[0])
+    #         if self.HF:
+    #             np.append(update_center,self.vrtx_idx[-1])
+
+    #         if not np.array_equiv(center_current,update_center):
+    #             self.center_freq_idx = update_center
+    #         # TODO: update filterbank building functions to create initial edge lists into single dictionary 
+    #         # TODO: and add code to initially create some of these vertice index lists to the end of the functions
+
+    #     if self.fb_type == 'trapezoid':
+    #         # TODO: Finish writing out code to update 'trapezoid' filterbank edge indices
+    #         # check lower
+    #         lower_current = self.lower_idx
+            
+    #         # check centers
+    #             # check center_lower
+
+    #             # check center_upper
+
+    #             # check tuples of center_freq
+            
+    #         # check upper
 
     def build_triangle_fb(self, 
                           filter_freq_range = (0,5),
@@ -210,6 +285,7 @@ class filterbank:
             If none or empty array, center_freq of the filterbank will be evenly spaced out using num_bands. 
         """
         self.fb_type = 'triangle'
+        self.def_freq_unit = freq_units
         freq_min, freq_max = filter_freq_range # (trusting user to input correctly)
 
         # if center frequencies not specified, centers are evenly spaced out given the freq range
@@ -291,6 +367,7 @@ class filterbank:
            
         """
         self.fb_type = 'trapezoid'
+        self.def_freq_unit = freq_units
 
         # TODO: Add flexibility to just provide num_bands and filter_freq_range and automatically create evenly spaced filters (like in triangle filter bank function)
         if center_freq is None or len(center_freq) == 0:                # if center_freq is None, use provided edge_freq
@@ -474,24 +551,28 @@ class filterbank:
         as a dictionary to a local pickle file"""
 
         filterbank_dictionary = {'fb_matrix': self.fb_matrix,
-                                'fftfreq': self.fftfreq,
+                                'freq_spectrum': self.freq_spectrum,
                                 'edge_freq': self.edge_freq,
-                                'center_freq': self.center_freq,
-                                'lower_edges': self.lower_edges,
-                                'upper_edges': self.upper_edges,
+                                'edge_freq_idx': self.vrtx_idx,
+                                'data_len':self.data_len,
+                                'cadence':self.cadence.total_seconds(),
                                 'DC': self.DC,
                                 'HF': self.HF
                                 }
 
-        fb_prefix = f'fb'
-        for edge in self.edge_freq:
-            fb_prefix +=f'_{edge:.3e}'
+        fb_prefix = f'fb_{self.fb_type}'
         if self.DC:
             fb_prefix += '_DC'
         if self.HF:
             fb_prefix += '_HF'
+        # for edge in self.edge_freq:
+        #     fb_prefix +=f'_{edge:.2e}'
+        for edge in self.vrtx_idx:
+            fb_prefix +=f'_{edge}'
 
-        with open(_SRC_DATA_DIR + '/filterbanks/' + fb_prefix +'.pkl', 'wb') as f:
+        fb_prefix+=f'_DL{self.data_len}_C{int(self.cadence.total_seconds())}'
+
+        with open(_SRC_DATA_DIR + '/filterbanks/' + fb_prefix +'.pkl','wb') as f:
             pickle.dump(filterbank_dictionary,f)
 
 if __name__ == '__main__':
@@ -534,34 +615,64 @@ if __name__ == '__main__':
                                end_date=args['stop_date'],
                                cols=args['cols'])
     # mag_df = mag_df-mag_df.mean()
+    # Triangle filterbank----------------------------------------------
+    # # Build Filterbank
+    # fltbnk = filterbank(data_len=len(mag_df),
+    #                        cadence=dt.timedelta(seconds=60))
+    # fltbnk.build_triangle_fb(filter_freq_range=(0.01,0.04),
+    #                          center_freq=[0.02,0.03],
+    #                          freq_units='sample_rate_frac'
+    #                          )
+    # # fb.visualize_filterbank(fb_matrix=fltbnk.fb_matrix,
+    # #                      fftfreq=fltbnk.freq_spectrum['hertz'],
+    # #                      xlim=(fltbnk.edge_freq[0],fltbnk.edge_freq[-1]),
+    # #                      ylabel='Amplitude')
+    # fltbnk.add_DC_HF_filters()
+    # visualize_filterbank(fb_matrix=fltbnk.fb_matrix,
+    #                      fftfreq=fltbnk.freq_spectrum['sample_rate_frac'],
+    #                      xlim=(fltbnk.edge_freq[0]-0.005,fltbnk.edge_freq[-1]+0.005),
+    #                      ylabel='Amplitude',)
+    
+    # import matplotlib.colors as mcolors
+    # for i,bank in enumerate(fltbnk.fb_matrix):
+    #     fig,ax = plt.subplots(figsize=(8,3))
+    #     ax.plot(fltbnk.freq_spectrum['sample_rate_frac'],bank,color = list(mcolors.TABLEAU_COLORS.keys())[i])
+    #     ax.grid(True)
+    #     ax.set_ylabel(ylabel='Amplitude')
+    #     ax.set_xlabel('Frequency')
+    #     # if xlim is None:
+    #     #     xlim = (np.min(fftfreq),np.max(fftfreq))
+    #     ax.set_xlim(0.0005,0.045)
 
+    #     plt.tight_layout()
+    #     plt.show()
+
+        #Trapezoid filterbank---------------------------------------
+        # variables for 11years
+    y11_freq = time_window_to_npt_freq(dt.timedelta(days=365*11),
+                                        data_cadence=dt.timedelta(minutes=1))
+
+    # frequencies based on windows
+    windows = [dt.timedelta(days=365*0.5),dt.timedelta(days=5),dt.timedelta(days=1),dt.timedelta(hours=18)]
+    cntr_freq = [time_window_to_npt_freq(w,data_cadence=dt.timedelta(minutes=1)) for w in windows]
+    
+    # variable for 1 day
+    d1_freq = time_window_to_npt_freq(dt.timedelta(hours=1.5),
+                                        data_cadence=dt.timedelta(minutes=1))
+    
     # Build Filterbank
     fltbnk = filterbank(data_len=len(mag_df),
-                           cadence=dt.timedelta(seconds=60))
-    fltbnk.build_triangle_fb(filter_freq_range=(0.01,0.04),
-                             center_freq=[0.02,0.03],
-                             freq_units='sample_rate_frac'
-                             )
-    # fb.visualize_filterbank(fb_matrix=fltbnk.fb_matrix,
-    #                      fftfreq=fltbnk.freq_spectrum['hertz'],
-    #                      xlim=(fltbnk.edge_freq[0],fltbnk.edge_freq[-1]),
-    #                      ylabel='Amplitude')
+                        cadence=dt.timedelta(seconds=60))
+    fltbnk.build_trapezoid_fb(filter_freq_range=None,
+                            center_freq=None,
+                            edge_freq=[y11_freq]+cntr_freq+[d1_freq],
+                            freq_units='sample_rate_frac'
+                            )
     fltbnk.add_DC_HF_filters()
+
+    fltbnk.update_vertices_idx(freq_units='sample_rate_frac')
+
     visualize_filterbank(fb_matrix=fltbnk.fb_matrix,
                          fftfreq=fltbnk.freq_spectrum['sample_rate_frac'],
                          xlim=(fltbnk.edge_freq[0]-0.005,fltbnk.edge_freq[-1]+0.005),
                          ylabel='Amplitude',)
-    
-    import matplotlib.colors as mcolors
-    for i,bank in enumerate(fltbnk.fb_matrix):
-        fig,ax = plt.subplots(figsize=(8,3))
-        ax.plot(fltbnk.freq_spectrum['sample_rate_frac'],bank,color = list(mcolors.TABLEAU_COLORS.keys())[i])
-        ax.grid(True)
-        ax.set_ylabel(ylabel='Amplitude')
-        ax.set_xlabel('Frequency')
-        # if xlim is None:
-        #     xlim = (np.min(fftfreq),np.max(fftfreq))
-        ax.set_xlim(0.0005,0.045)
-
-        plt.tight_layout()
-        plt.show()
